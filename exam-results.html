@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Hasil Ujian — UNNES LMS">
+  <title>Hasil Ujian — UNNES LMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a href="index.html" class="navbar-brand">
+          <img src="assets/logo.png" alt="UNNES" style="width:40px;height:40px;object-fit:contain;">
+          <span>UNNES <span class="accent">LMS</span></span>
+        </a>
+        <ul class="navbar-nav">
+          <li><a href="#" id="backLink">← Kembali</a></li>
+          <li><a href="#" onclick="App.logout()">🚪 Keluar</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <main class="container" style="max-width:800px;padding-top:40px;padding-bottom:60px;">
+      <!-- Header -->
+      <div id="resultHeader" class="animate-in">
+        <!-- Dynamic -->
+      </div>
+
+      <!-- Score Card -->
+      <div id="scoreCard" class="animate-in delay-1" style="margin:32px 0;">
+        <!-- Dynamic -->
+      </div>
+
+      <!-- Proctoring Summary -->
+      <div id="proctoringSummary" class="animate-in delay-2" style="margin-bottom:32px;">
+        <!-- Dynamic -->
+      </div>
+
+      <!-- Answer Details -->
+      <div id="answerDetails" class="animate-in delay-3">
+        <!-- Dynamic -->
+      </div>
+
+      <!-- Back to Dashboard Button -->
+      <div style="text-align:center;margin:32px 0;">
+        <a href="student-dashboard.html" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1B3A6B,#2563EB);color:#fff;padding:14px 32px;border-radius:12px;font-weight:700;font-size:1rem;text-decoration:none;box-shadow:0 4px 15px rgba(37,99,235,0.3);transition:transform 0.2s,box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(37,99,235,0.4)';" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 15px rgba(37,99,235,0.3)';">
+          ← Kembali ke Dashboard
+        </a>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© 2026 UNNES LMS — Universitas Negeri Semarang</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const user = App.requireAuth();
+    const params = new URLSearchParams(window.location.search);
+    const examId = params.get('id');
+    const studentParam = params.get('student');
+
+    // Set back link
+    const backLink = document.getElementById('backLink');
+    if (user && user.role === 'lecturer') {
+      backLink.href = 'lecturer-dashboard.html';
+    } else {
+      backLink.href = 'student-dashboard.html';
+    }
+
+    if (examId && user) {
+      loadResults();
+    }
+
+    async function loadResults() {
+      const exam = await App.getExamById(examId);
+      const allResults = await App.getResults();
+
+      // Find the right result
+      const targetStudent = studentParam || user.nim;
+      const result = allResults.find(r => r.examId === examId && r.studentId === targetStudent);
+
+      if (!exam) {
+        document.getElementById('resultHeader').innerHTML = '<h1>Ujian tidak ditemukan</h1>';
+        return;
+      }
+
+      // Header
+      document.getElementById('resultHeader').innerHTML = `
+        <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:4px;">📊 Hasil Ujian</h1>
+        <p style="color:var(--text-secondary);">${exam.title} — ${exam.course}</p>
+      `;
+
+      if (!result) {
+        document.getElementById('scoreCard').innerHTML = `
+          <div class="card-glass text-center" style="padding:48px;">
+            <div style="font-size:3rem;margin-bottom:12px;">📋</div>
+            <h2>Belum Ada Hasil</h2>
+            <p style="color:var(--text-secondary);margin-top:8px;">Anda belum mengerjakan ujian ini.</p>
+            <a href="take-exam.html?id=${examId}" class="btn btn-primary btn-lg" style="margin-top:20px;">▶ Mulai Ujian</a>
+          </div>
+        `;
+        return;
+      }
+
+      // Score Card
+      const grade = getGrade(result.score);
+      const scoreColor = result.score >= 70 ? 'var(--success)' : result.score >= 50 ? 'var(--warning)' : 'var(--danger)';
+
+      document.getElementById('scoreCard').innerHTML = `
+        <div class="card-glass" style="text-align:center;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;">
+            <div>
+              <div style="width:140px;height:140px;border-radius:50%;border:6px solid ${scoreColor};display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto;">
+                <span style="font-size:3rem;font-weight:900;color:${scoreColor};">${result.score}</span>
+                <span style="font-size:0.8rem;color:var(--text-muted);">/ 100</span>
+              </div>
+            </div>
+            <div style="text-align:left;">
+              <div style="font-size:3rem;font-weight:900;color:${scoreColor};margin-bottom:4px;">${grade}</div>
+              <div style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;">
+                <span><strong>Mahasiswa:</strong> ${result.studentName}</span>
+                <span><strong>Waktu Submit:</strong> ${App.formatDate(result.submittedAt)} ${App.formatTime(result.submittedAt)}</span>
+                ${result.timeUsed ? `<span><strong>Waktu Digunakan:</strong> ${Math.floor(result.timeUsed / 60)} menit ${result.timeUsed % 60} detik</span>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Proctoring Summary
+      const violations = result.violations || [];
+      const proctorEl = document.getElementById('proctoringSummary');
+
+      if (exam.proctoring) {
+        const summary = {};
+        violations.forEach(v => { summary[v.type] = (summary[v.type] || 0) + 1; });
+
+        const violationTypes = {
+          split_screen: { icon: '🖥', label: 'Split Layar Monitor', color: 'var(--info)' },
+          multiple_faces: { icon: '👥', label: 'Wajah Lebih dari 1', color: 'var(--danger)' },
+          tab_switch: { icon: '🔀', label: 'Beralih ke Tab Lain', color: 'var(--warning)' },
+          no_face: { icon: '👻', label: 'Wajah Menghilang dari Layar', color: 'var(--danger)' },
+          gaze_away: { icon: '😐', label: 'Pandangan Beralih', color: 'var(--warning)' },
+        };
+
+        proctorEl.innerHTML = `
+          <div class="card-glass">
+            <h2 style="font-size:1.1rem;margin-bottom:16px;">🛡️ Laporan Proctoring</h2>
+
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+              <div style="padding:12px 20px;border-radius:var(--radius-sm);background:${violations.length === 0 ? 'var(--success-bg)' : 'var(--danger-bg)'};">
+                <span style="font-size:1.5rem;font-weight:800;color:${violations.length === 0 ? 'var(--success)' : 'var(--danger)'};">${violations.length}</span>
+                <span style="font-size:0.85rem;color:var(--text-secondary);margin-left:6px;">Total Pelanggaran</span>
+              </div>
+              ${violations.length === 0 ?
+                '<span class="badge badge-success" style="font-size:0.85rem;padding:8px 16px;">✓ Tidak ada pelanggaran terdeteksi</span>' :
+                '<span class="badge badge-danger" style="font-size:0.85rem;padding:8px 16px;">⚠ Terdeteksi aktivitas mencurigakan</span>'
+              }
+            </div>
+
+            ${Object.keys(summary).length > 0 ? `
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                ${Object.entries(summary).map(([type, count]) => {
+                  const info = violationTypes[type] || { icon: '⚠', label: type, color: 'var(--text-muted)' };
+                  return `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:var(--radius-sm);">
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <span>${info.icon}</span>
+                        <span style="font-size:0.9rem;">${info.label}</span>
+                      </div>
+                      <span class="badge badge-danger">${count}x</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
+
+            ${violations.length > 0 ? `
+              <details style="margin-top:12px;">
+                <summary style="cursor:pointer;color:var(--text-secondary);font-size:0.85rem;font-weight:600;">📋 Detail Log Pelanggaran (${violations.length})</summary>
+                <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+                  ${violations.map(v => {
+                    const info = violationTypes[v.type] || { icon: '⚠', label: v.type };
+                    return `
+                      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(239,68,68,0.06);border-radius:6px;font-size:0.85rem;">
+                        <span>${info.icon}</span>
+                        <span>${v.desc}</span>
+                        <span style="margin-left:auto;color:var(--text-muted);font-size:0.75rem;">${App.formatTime(v.time)}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </details>
+            ` : ''}
+
+            ${result.expressions && Object.keys(result.expressions).length > 0 ? `
+              <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.1);">
+                <h3 style="font-size:0.95rem;margin-bottom:12px;color:var(--text-secondary);">📊 Analisis Reaksi Wajah Sepanjang Ujian</h3>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  ${Object.entries(result.expressions).sort((a, b) => b[1] - a[1]).map(([expr, pct]) => {
+                    const emojis = { happy: '😊', sad: '😢', angry: '😠', surprised: '😲', fearful: '😨', disgusted: '🤢', neutral: '😐' };
+                    const labels = { happy: 'Senang', sad: 'Sedih', angry: 'Marah', surprised: 'Terkejut', fearful: 'Takut', disgusted: 'Jijik', neutral: 'Netral' };
+                    const colors = { happy: '#10B981', sad: '#3B82F6', angry: '#EF4444', surprised: '#F59E0B', fearful: '#8B5CF6', disgusted: '#EC4899', neutral: '#6B7280' };
+                    
+                    if(pct < 1) return ''; // hide negligible values
+                    
+                    return `
+                      <div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">
+                          <span>${emojis[expr] || ''} ${labels[expr] || expr}</span>
+                          <span style="font-family:monospace;">${pct}%</span>
+                        </div>
+                        <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                          <div style="width:${pct}%;height:100%;background:${colors[expr] || '#999'};border-radius:4px;"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        proctorEl.innerHTML = `
+          <div class="card" style="text-align:center;padding:24px;color:var(--text-muted);">
+            🛡️ Proctoring tidak aktif untuk ujian ini
+          </div>
+        `;
+      }
+
+      // Answer Details
+      const detailsEl = document.getElementById('answerDetails');
+      detailsEl.innerHTML = `
+        <h2 style="font-size:1.1rem;margin-bottom:16px;">📝 Detail Jawaban</h2>
+        ${exam.questions.map((q, idx) => {
+          const studentAnswer = result.answers[q.id];
+          let isCorrect = false;
+          let answerDisplay = '';
+
+          if (q.type === 'multiple') {
+            isCorrect = studentAnswer === q.answer;
+            answerDisplay = studentAnswer !== undefined
+              ? `${String.fromCharCode(65 + studentAnswer)}. ${q.options[studentAnswer]}`
+              : '<em style="color:var(--text-muted);">Tidak dijawab</em>';
+          } else {
+            answerDisplay = studentAnswer || '<em style="color:var(--text-muted);">Tidak dijawab</em>';
+          }
+
+          return `
+            <div class="card" style="margin-bottom:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span class="question-number" style="margin:0;">Soal ${idx + 1}</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="badge ${q.type === 'multiple' ? 'badge-info' : 'badge-accent'}">${q.type === 'multiple' ? 'PG' : 'Essay'}</span>
+                  ${q.type === 'multiple' ? `<span class="badge ${isCorrect ? 'badge-success' : 'badge-danger'}">${isCorrect ? '✓ Benar' : '✕ Salah'}</span>` : '<span class="badge badge-warning">Perlu Review</span>'}
+                </div>
+              </div>
+              <p style="margin-bottom:12px;line-height:1.6;">${q.text.replace(/\n/g, '<br>')}</p>
+              <div style="padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:var(--radius-sm);border-left:3px solid ${q.type === 'multiple' ? (isCorrect ? 'var(--success)' : 'var(--danger)') : 'var(--accent)'};">
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Jawaban Anda:</p>
+                <p style="font-size:0.95rem;">${answerDisplay}</p>
+              </div>
+              ${q.type === 'multiple' && !isCorrect ? `
+                <div style="padding:12px 16px;background:var(--success-bg);border-radius:var(--radius-sm);border-left:3px solid var(--success);margin-top:8px;">
+                  <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Jawaban Benar:</p>
+                  <p style="font-size:0.95rem;color:var(--success);">${String.fromCharCode(65 + q.answer)}. ${q.options[q.answer]}</p>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      `;
+    }
+
+    function getGrade(score) {
+      if (score >= 85) return 'A';
+      if (score >= 80) return 'A-';
+      if (score >= 75) return 'B+';
+      if (score >= 70) return 'B';
+      if (score >= 65) return 'B-';
+      if (score >= 60) return 'C+';
+      if (score >= 55) return 'C';
+      if (score >= 50) return 'C-';
+      if (score >= 40) return 'D';
+      return 'E';
+    }
+  </script>
+</body>
+</html>

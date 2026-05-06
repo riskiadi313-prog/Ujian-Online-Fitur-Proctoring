@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Masuk ke UNNES LMS — Platform Ujian Online">
+  <title>Masuk — UNNES LMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card animate-in" style="max-width:420px;padding:36px 32px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <img src="assets/logo.png" alt="Logo UNNES" style="width:80px;height:80px;object-fit:contain;margin:0 auto 12px;">
+        <h1 style="font-size:1.4rem;">Masuk</h1>
+        <p class="auth-subtitle" style="margin-bottom:0;font-size:0.85rem;">UNNES LMS — Platform Ujian Online</p>
+      </div>
+
+      <!-- Role Tabs -->
+      <div class="role-tabs" id="roleTabs" style="margin-bottom:20px;">
+        <button class="role-tab active" data-role="student" onclick="switchRole('student')">Mahasiswa</button>
+        <button class="role-tab" data-role="lecturer" onclick="switchRole('lecturer')">Dosen</button>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label" id="nimLabel">NIM</label>
+          <input type="text" class="form-input" id="nimInput" placeholder="Masukkan NIM" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="passwordInput" placeholder="Masukkan password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px;">Masuk</button>
+      </form>
+
+      <p class="auth-footer" style="margin-top:16px;font-size:0.85rem;">
+        Belum punya akun? <a href="register.html">Daftar</a>
+      </p>
+
+      <div style="text-align:center; margin-top:24px;">
+        <button type="button" onclick="clearDatabaseAndReload()" style="background:transparent; border:1px dashed #ccc; color:#888; font-size:0.75rem; padding:4px 12px; border-radius:4px; cursor:pointer;">⚠️ Reset Seluruh Data (Dev)</button>
+      </div>
+      
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    async function clearDatabaseAndReload() {
+      if(!confirm('⚠️ PERINGATAN: Semua data Mahasiswa, Dosen, Ujian, dan Nilai akan DIHAPUS PERMANEN. Anda yakin?')) return;
+      
+      const dbName = 'UNNES_LMS_DB';
+      const req = indexedDB.deleteDatabase(dbName);
+      req.onsuccess = function () {
+        localStorage.clear();
+        alert('Data berhasil dikosongkan! Halaman akan dimuat ulang.');
+        window.location.reload();
+      };
+      req.onerror = function () {
+        alert('Gagal mengosongkan database.');
+      };
+      req.onblocked = function () {
+        alert('Tutup tab lain yang membuka website ini terlebih dahulu!');
+      };
+    }
+    
+    let currentRole = 'student';
+
+    function switchRole(role) {
+      currentRole = role;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-role="${role}"]`).classList.add('active');
+      document.getElementById('nimLabel').textContent = role === 'student' ? 'NIM' : 'NIP';
+      document.getElementById('nimInput').placeholder = role === 'student' ? 'Masukkan NIM' : 'Masukkan NIP';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const nim = document.getElementById('nimInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+
+      if (!nim || !password) {
+        App.toast('Mohon lengkapi semua field', 'warning');
+        return;
+      }
+
+      const result = await App.loginUser(nim, password);
+      if (result.error) {
+        App.toast(result.error, 'danger');
+        return;
+      }
+
+      App.toast('Login berhasil!', 'success');
+      setTimeout(() => {
+        window.location.href = result.user.role === 'student' ? 'student-dashboard.html' : 'lecturer-dashboard.html';
+      }, 800);
+    }
+
+    const user = App.getUser();
+    if (user) {
+      window.location.href = user.role === 'student' ? 'student-dashboard.html' : 'lecturer-dashboard.html';
+    }
+  </script>
+</body>
+</html>
