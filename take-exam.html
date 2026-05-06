@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Ujian Online — UNNES LMS dengan AI Proctoring">
+  <title>Ujian Online — UNNES LMS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+</head>
+<body>
+  <style>
+    .exam-page { min-height:100vh; background:#f5f6fa; }
+    .exam-header { background:linear-gradient(135deg,#1B3A6B 0%,#2a5298 100%); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .exam-header .eh-left { display:flex; align-items:center; gap:16px; }
+    .exam-header .eh-icon { width:48px;height:48px;background:#D4A843;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem; }
+    .exam-header .eh-title { color:#fff; }
+    .exam-header .eh-title h2 { margin:0;font-size:1.15rem;font-weight:700; }
+    .exam-header .eh-title p { margin:2px 0 0;font-size:0.8rem;opacity:0.7; }
+    .exam-header .eh-timer { background:rgba(255,255,255,0.1);border:2px solid #D4A843;border-radius:12px;padding:10px 20px;color:#D4A843;font-size:1.5rem;font-weight:900;display:flex;align-items:center;gap:8px; }
+
+    .exam-body { display:flex; gap:24px; padding:24px 32px; max-width:1300px; margin:0 auto; }
+    .exam-left { flex:1; }
+    .exam-right { width:400px; flex-shrink:0; display:flex; flex-direction:column; gap:16px; }
+
+    .q-card { background:#fff; border-radius:16px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
+    .q-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .q-number { font-size:1rem; font-weight:800; color:#333; }
+    .q-text { font-size:1rem; color:#333; line-height:1.6; margin-bottom:24px; }
+
+    .opt-list { display:flex; flex-direction:column; gap:10px; }
+    .opt-item { display:flex; align-items:center; gap:14px; padding:16px 20px; border:2px solid #e5e7eb; border-radius:12px; cursor:pointer; transition:all 0.2s; font-size:0.95rem; color:#444; }
+    .opt-item:hover { border-color:#D4A843; background:#FFFDF5; }
+    .opt-item.selected { border-color:#D4A843; background:#FFF8E1; }
+    .opt-radio { width:20px;height:20px;border-radius:50%;border:2px solid #ccc;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center; }
+    .opt-item.selected .opt-radio { border-color:#D4A843;background:#D4A843; }
+    .opt-item.selected .opt-radio::after { content:'';width:8px;height:8px;background:#fff;border-radius:50%; }
+
+    .q-actions { display:flex; gap:12px; margin-top:24px; }
+    .q-actions .btn-prev { padding:10px 20px;border-radius:10px;border:1px solid #ddd;background:#fff;color:#888;font-weight:600;cursor:pointer;font-size:0.88rem; }
+    .q-actions .btn-next { padding:10px 24px;border-radius:10px;border:none;background:#D4A843;color:#fff;font-weight:700;cursor:pointer;font-size:0.88rem; }
+
+    /* Right Sidebar */
+    .nav-card { background:#fff; border-radius:16px; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
+    .nav-card h3 { margin:0 0 14px; font-size:1rem; font-weight:800; color:#333; }
+    .nav-cam-row { display:flex; gap:14px; }
+    .nav-grid-wrap { flex:1; }
+    .nav-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+    .nav-dot { width:100%;aspect-ratio:1;border-radius:8px;border:1px solid #e0e0e0;background:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;color:#555;transition:all 0.2s; }
+    .nav-dot:hover { background:#FFF8E1;border-color:#D4A843; }
+    .nav-dot.current { background:#D4A843;color:#fff;border-color:#D4A843; }
+    .nav-dot.answered { background:#E8F5E9;color:#2E7D32;border-color:#a5d6a7; }
+    .nav-dot.ragu { background:#FFF3E0;color:#E65100;border-color:#FFB74D; }
+
+    .cam-sidebar { width:180px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
+    .cam-sidebar .cam-top { display:flex; gap:8px; }
+    .cam-sidebar .cam-feed { width:90px; flex-shrink:0; }
+    .cam-sidebar .cam-feed video { width:100%; border-radius:8px; background:#111; display:block; }
+    .cam-sidebar .expr-bars { flex:1; display:flex; flex-direction:column; gap:3px; justify-content:center; }
+    .cam-sidebar .cam-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:2px; }
+    .cam-sidebar .cam-stat { text-align:center; font-size:0.55rem; color:#888; }
+    .cam-sidebar .cam-stat .cnum { font-weight:800; font-size:0.8rem; }
+
+    .sb-submit { width:100%;padding:14px;border:none;border-radius:12px;background:#10B981;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.2s; }
+    .sb-submit:hover { background:#0d9668; }
+    .sb-legend { display:flex; gap:16px; justify-content:center; font-size:0.75rem; color:#888; margin-top:10px; }
+    .sb-legend span { display:flex;align-items:center;gap:4px; }
+    .sb-legend .dot-d { width:10px;height:10px;border-radius:3px;background:#E8F5E9;border:1px solid #a5d6a7; }
+    .sb-legend .dot-r { width:10px;height:10px;border-radius:3px;background:#FFF8E1;border:1px solid #D4A843; }
+
+    .proctor-info { background:#fff; border-radius:16px; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
+    .proctor-info h3 { margin:0 0 12px; font-size:0.95rem; font-weight:800; color:#fff; background:linear-gradient(135deg,#1B3A6B,#2a5298);padding:10px 16px;border-radius:10px;display:flex;align-items:center;gap:6px; }
+    .proctor-info .pi-list { font-size:0.78rem; color:#555; line-height:1.8; }
+    .proctor-info .pi-list b { color:#333; }
+
+    @media(max-width:900px) {
+      .exam-body { flex-direction:column; padding:16px; }
+      .exam-right { width:100%; }
+      .nav-cam-row { flex-direction:column; }
+      .cam-sidebar { width:100%;flex-direction:row;align-items:center; }
+    }
+  </style>
+
+  <div class="exam-page">
+    <!-- Header Bar -->
+    <div class="exam-header" id="examHeaderBar">
+      <div class="eh-left">
+        <a href="student-dashboard.html" style="text-decoration:none;">
+          <img src="assets/logo.png" alt="UNNES" style="width:40px;height:40px;border-radius:8px;">
+        </a>
+        <div class="eh-title">
+          <h2 id="examTitleNav">Memuat Ujian...</h2>
+          <p id="examSubtitle">Memuat...</p>
+        </div>
+      </div>
+      <div class="eh-timer" id="examTimer">
+        <span>⏱</span>
+        <span id="timerDisplay">00:00</span>
+      </div>
+    </div>
+
+    <!-- Two-Column Body -->
+    <div class="exam-body">
+      <!-- Left: Question Area -->
+      <div class="exam-left">
+        <div class="q-card" id="questionPanel">
+          <div id="questionContent">
+            <!-- Dynamic -->
+          </div>
+          <div class="q-actions" id="examActions">
+            <button class="btn-prev" id="prevBtn" onclick="navigateQuestion(-1)">← Sebelumnya</button>
+            <button class="btn-next" id="nextBtn" onclick="navigateQuestion(1)">Selanjutnya →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Sidebar -->
+      <div class="exam-right">
+        <!-- Navigator Card -->
+        <div class="nav-card">
+          <h3>Navigasi Soal</h3>
+          <div class="nav-grid" id="questionNav">
+            <!-- Dynamic number buttons -->
+          </div>
+
+          <!-- Submit + Legend -->
+          <button class="sb-submit" onclick="confirmSubmit()" style="margin-top:14px;">✓ Kumpulkan Ujian</button>
+          <div class="sb-legend">
+            <span><span class="dot-d"></span> Dijawab</span>
+            <span><span class="dot-r"></span> Ragu Belum</span>
+          </div>
+        </div>
+
+        <!-- Camera Proctoring Card (separate) -->
+        <div class="nav-card" id="proctorPanel" style="display:none;">
+          <h3>🛡️ Kamera Proctoring</h3>
+          <div style="display:flex;gap:12px;">
+            <div style="width:200px;flex-shrink:0;">
+              <div style="position:relative;border-radius:10px;overflow:hidden;background:#111;">
+                <video id="proctorVideo" autoplay playsinline muted style="width:100%;display:block;border-radius:10px;"></video>
+                <canvas id="proctorCanvas" style="display:none;"></canvas>
+                <div id="statusText" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:#10B981;font-size:0.6rem;padding:3px 6px;text-align:center;">Memuat...</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;justify-content:center;" id="expressionBars">
+              <div style="font-size:0.7rem;color:#888;font-weight:700;margin-bottom:4px;">Reaksi Wajah</div>
+              <!-- Dynamic expression bars -->
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px;padding-top:10px;border-top:1px solid #eee;">
+            <div style="text-align:center;font-size:0.55rem;color:#888;"><div style="font-weight:800;font-size:0.85rem;color:#F59E0B;" id="statFace">0</div>😐 Pandangan</div>
+            <div style="text-align:center;font-size:0.55rem;color:#888;"><div style="font-weight:800;font-size:0.85rem;color:#3B82F6;" id="statMulti">0</div>👥 2+ Wajah</div>
+            <div style="text-align:center;font-size:0.55rem;color:#888;"><div style="font-weight:800;font-size:0.85rem;color:#EF4444;" id="statTab">0</div>❌ Tab</div>
+            <div style="text-align:center;font-size:0.55rem;color:#888;"><div style="font-weight:800;font-size:0.85rem;color:#F59E0B;" id="statNoFace">0</div>👻 Hilang</div>
+            <div style="text-align:center;font-size:0.55rem;color:#888;"><div style="font-weight:800;font-size:0.85rem;color:#06B6D4;" id="statSplit">0</div>🖥 Split</div>
+          </div>
+          <div style="text-align:center;margin-top:10px;padding-top:8px;border-top:1px solid #eee;">
+            <div style="font-size:0.7rem;color:#888;font-weight:600;">PERINGATAN</div>
+            <div style="font-size:1.2rem;font-weight:900;color:#EF4444;" id="violationCount">0 / 5</div>
+            <div style="font-size:0.6rem;color:#888;margin-top:2px;">Batas maksimal: 5 pelanggaran</div>
+            <div id="violationProgressBar" style="margin-top:6px;width:100%;height:6px;background:#2d2d2d;border-radius:3px;overflow:hidden;">
+              <div id="violationProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#F59E0B,#EF4444);border-radius:3px;transition:width 0.4s ease;"></div>
+            </div>
+          </div>
+          <!-- Violation Log -->
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid #eee;">
+            <div style="font-size:0.72rem;font-weight:700;color:#333;margin-bottom:6px;display:flex;align-items:center;gap:4px;">📋 Log Kecurangan</div>
+            <div id="violationLog" style="max-height:150px;overflow-y:auto;font-size:0.72rem;color:#666;">
+              <div style="text-align:center;color:#aaa;padding:8px;font-style:italic;">Belum ada pelanggaran ✔️</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proctoring Features Info -->
+        <div class="proctor-info">
+          <h3>🔍 5 Fitur Proctoring</h3>
+          <div class="pi-list">
+            1. <b>🖥 Split Layar</b> - Deteksi split screen monitor laptop (3 dtk)<br>
+            2. <b>👥 2+ Wajah</b> - Deteksi wajah lebih dari 1 di kamera (5 dtk)<br>
+            3. <b>❌ Beralih Tab</b> - Deteksi beralih ke tab lainnya (1 dtk)<br>
+            4. <b>👻 Wajah Hilang</b> - Deteksi wajah menghilang dari layar (5 dtk)<br>
+            5. <b>😐 Pandangan Beralih</b> - Deteksi pandangan menyimpang ke kiri/kanan/atas/bawah (5 dtk)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Modal -->
+    <div class="modal-overlay" id="submitModal">
+      <div class="modal">
+        <h2>📤 Submit Ujian?</h2>
+        <p id="modalInfo">Anda yakin ingin menyelesaikan ujian ini?</p>
+        <div id="modalAnswerInfo" style="padding:12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:20px;font-size:0.9rem;">
+          <!-- Dynamic -->
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" onclick="closeModal()">← Kembali</button>
+          <button class="btn btn-accent" onclick="submitExam()">✓ Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PRE-EXAM FACE VERIFICATION OVERLAY ========== -->
+  <div id="verificationOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;width:100%;max-width:800px;overflow:hidden;backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      
+      <!-- Header -->
+      <div style="padding:24px 32px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:2rem;margin-bottom:8px;">🛡️</div>
+        <h2 style="margin:0;font-size:1.5rem;color:#fff;font-weight:700;">Presensi & Verifikasi Wajah</h2>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,0.5);font-size:0.9rem;">Verifikasi identitas Anda sebelum memulai ujian</p>
+      </div>
+
+      <!-- Step 1: Camera Scan -->
+      <div id="verifyStep1" style="padding:32px;">
+        <div style="display:flex;gap:24px;align-items:stretch;">
+          <!-- Camera Feed -->
+          <div style="flex:1;">
+            <h4 style="color:#3B82F6;margin:0 0 12px;font-size:0.95rem;">📷 Kamera Live</h4>
+            <div id="verifyCamContainer" style="position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:12px;overflow:hidden;border:3px solid #3B82F6;">
+              <video id="verifyVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
+              <canvas id="verifyCanvas" style="display:none;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></canvas>
+              <div id="verifyCamPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#888;">
+                <span style="font-size:2.5rem;">📷</span>
+                <span style="margin-top:6px;font-size:0.85rem;">Klik tombol di bawah untuk mulai</span>
+              </div>
+              <div id="verifyScanOverlay" style="display:none;position:absolute;inset:0;border:3px solid #10B981;border-radius:12px;animation:pulse 1.5s ease-in-out infinite;">
+                <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(16,185,129,0.9);padding:4px 16px;border-radius:20px;font-size:0.8rem;color:#fff;font-weight:600;">🔍 Mendeteksi wajah...</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Registration Photo -->
+          <div style="flex:1;">
+            <h4 style="color:#10B981;margin:0 0 12px;font-size:0.95rem;">🪪 Foto Registrasi</h4>
+            <div style="width:100%;aspect-ratio:4/3;background:#111;border-radius:12px;overflow:hidden;border:3px solid #10B981;display:flex;align-items:center;justify-content:center;">
+              <img id="verifyRegPhoto" src="" style="width:100%;height:100%;object-fit:cover;" alt="Foto Registrasi">
+              <div id="verifyNoRegPhoto" style="display:none;text-align:center;color:#888;">
+                <span style="font-size:2rem;">🚫</span>
+                <p style="font-size:0.8rem;margin-top:4px;">Foto registrasi tidak tersedia</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="verifyStatusMsg" style="margin-top:20px;text-align:center;padding:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:8px;color:#93c5fd;font-size:0.9rem;">
+          ℹ️ Tekan tombol di bawah untuk memulai pemindaian wajah
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;">
+          <button id="verifyStartBtn" class="btn" style="background:#3B82F6;color:#fff;padding:12px 32px;font-weight:700;font-size:1rem;border:none;" onclick="startFaceVerification()">
+            📷 Mulai Pemindaian Wajah
+          </button>
+          <button id="verifyRetryBtn" class="btn" style="background:#F59E0B;color:#fff;padding:12px 32px;font-weight:700;font-size:1rem;border:none;display:none;" onclick="retryFaceVerification()">
+            🔄 Ulangi Pemindaian
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Verification Result -->
+      <div id="verifyStep2" style="padding:32px;display:none;">
+        <div style="text-align:center;">
+          <div id="verifyResultIcon" style="font-size:4rem;margin-bottom:12px;">✅</div>
+          <h3 id="verifyResultTitle" style="color:#10B981;margin:0 0 8px;font-size:1.3rem;">Verifikasi Berhasil</h3>
+          <p id="verifyResultDesc" style="color:rgba(255,255,255,0.6);margin:0 0 20px;font-size:0.9rem;">Wajah Anda terdeteksi dan cocok dengan data registrasi.</p>
+        </div>
+
+        <div style="display:flex;gap:24px;justify-content:center;margin-bottom:24px;">
+          <div style="text-align:center;">
+            <div style="font-size:0.75rem;color:#3B82F6;margin-bottom:4px;font-weight:600;">Foto Presensi</div>
+            <img id="verifyResultLive" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #3B82F6;">
+          </div>
+          <div style="display:flex;align-items:center;font-size:1.5rem;color:#10B981;">⟷</div>
+          <div style="text-align:center;">
+            <div style="font-size:0.75rem;color:#10B981;margin-bottom:4px;font-weight:600;">Foto Registrasi</div>
+            <img id="verifyResultReg" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #10B981;">
+          </div>
+        </div>
+
+        <!-- Confidence Info -->
+        <div id="verifyConfInfo" style="display:flex;gap:12px;justify-content:center;margin-bottom:24px;">
+        </div>
+
+        <div style="text-align:center;">
+          <button id="verifyProceedBtn" class="btn" style="background:#10B981;color:#fff;padding:14px 48px;font-weight:700;font-size:1.1rem;border:none;" onclick="proceedToExam()">
+            ✅ Mulai Ujian Sekarang
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+
+  <script src="js/app.js"></script>
+  <script src="js/proctor.js"></script>
+  <script>
+    let user;
+    let exam;
+    let currentQuestion = 0;
+    let answers = {};
+    let doubts = {};
+    let timeRemaining = 0;
+    let timerInterval = null;
+    let verifyCameraStream = null;
+    let verifyDetectLoop = null;
+    let capturedPhotoPresensi = null;
+    let verifyModelsLoaded = false;
+    let exprTotals = { happy: 0, sad: 0, angry: 0, surprised: 0, fearful: 0, disgusted: 0, neutral: 0 };
+    let exprSampleCount = 0;
+
+    (async () => {
+      user = App.requireAuth('student');
+      const params = new URLSearchParams(window.location.search);
+      const examId = params.get('id');
+
+      if (!examId) {
+        App.toast('Ujian tidak ditemukan', 'danger');
+        setTimeout(() => { window.location.href = 'student-dashboard.html'; }, 1500);
+        return;
+      }
+
+      exam = await App.getExamById(examId);
+      if (!exam) {
+        App.toast('Ujian tidak ditemukan', 'danger');
+        setTimeout(() => { window.location.href = 'student-dashboard.html'; }, 1500);
+        return;
+      }
+
+      document.getElementById('examTitleNav').textContent = exam.title;
+      document.getElementById('examSubtitle').textContent = `${exam.course || ''} • ${exam.questions.length} Soal • ${exam.duration} Menit`;
+
+      // Hide exam UI until verification is done
+      document.getElementById('examTimer').style.visibility = 'hidden';
+      document.querySelector('.exam-body').style.display = 'none';
+
+      // Load the registration photo for comparison
+      const fullUserData = await dbGet('users', user.nim);
+      if (fullUserData && fullUserData.photoReg) {
+        document.getElementById('verifyRegPhoto').src = fullUserData.photoReg;
+        document.getElementById('verifyRegPhoto').style.display = 'block';
+        document.getElementById('verifyNoRegPhoto').style.display = 'none';
+      } else {
+        document.getElementById('verifyRegPhoto').style.display = 'none';
+        document.getElementById('verifyNoRegPhoto').style.display = 'flex';
+      }
+    })();
+
+    async function startFaceVerification() {
+      const video = document.getElementById('verifyVideo');
+      const startBtn = document.getElementById('verifyStartBtn');
+      const statusMsg = document.getElementById('verifyStatusMsg');
+
+      // Step 1: Access camera
+      try {
+        // First, release any existing camera to free the hardware
+        stopVerifyCamera();
+        await new Promise(r => setTimeout(r, 500)); // Give Safari time to release
+
+        // Check if camera devices exist
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        if (videoDevices.length === 0) {
+          throw new Error('Tidak ada kamera yang ditemukan pada perangkat ini');
+        }
+
+        // Try getting camera with retry for Safari AVCapture issues
+        let stream = null;
+        let lastErr = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false });
+            break; // Success
+          } catch(e) {
+            lastErr = e;
+            console.warn(`Camera attempt ${attempt}/3 failed:`, e.message);
+            if (attempt < 3) {
+              statusMsg.innerHTML = `⏳ Kamera sedang sibuk, mencoba lagi... (${attempt}/3)`;
+              statusMsg.style.borderColor = 'rgba(245,158,11,0.3)';
+              statusMsg.style.background = 'rgba(245,158,11,0.1)';
+              statusMsg.style.color = '#fbbf24';
+              await new Promise(r => setTimeout(r, 1500)); // Wait before retry
+            }
+          }
+        }
+
+        // Fallback: try simplest constraints
+        if (!stream) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch(e2) {
+            throw lastErr || e2;
+          }
+        }
+
+        verifyCameraStream = stream;
+        video.srcObject = stream;
+
+        // Wait for video metadata to load before playing
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => resolve();
+          setTimeout(() => resolve(), 3000);
+        });
+
+        video.style.display = 'block';
+        document.getElementById('verifyCamPlaceholder').style.display = 'none';
+        await video.play();
+
+        startBtn.disabled = true;
+        startBtn.textContent = '⏳ Memuat AI...';
+        statusMsg.innerHTML = '✅ Kamera berhasil diakses. Memuat model AI...';
+        statusMsg.style.borderColor = 'rgba(16,185,129,0.3)';
+        statusMsg.style.background = 'rgba(16,185,129,0.1)';
+        statusMsg.style.color = '#6ee7b7';
+      } catch(camErr) {
+        console.error('Camera access error:', camErr);
+        statusMsg.innerHTML = `❌ Gagal mengakses kamera: ${camErr.message || 'Unknown error'}.<br><span style="font-size:0.75rem;opacity:0.8;">Pastikan tidak ada aplikasi lain yang menggunakan kamera (FaceTime, Zoom, dll). Tutup aplikasi tersebut lalu klik Coba Lagi.</span>`;
+        statusMsg.style.borderColor = 'rgba(239,68,68,0.3)';
+        statusMsg.style.background = 'rgba(239,68,68,0.1)';
+        statusMsg.style.color = '#fca5a5';
+        startBtn.textContent = '🔄 Coba Lagi';
+        startBtn.disabled = false;
+        return;
+      }
+
+      // Step 2: Load AI models
+      try {
+        if (!verifyModelsLoaded) {
+          statusMsg.innerHTML = '⏳ Memuat model pengenalan wajah...';
+          statusMsg.style.borderColor = 'rgba(245,158,11,0.3)';
+          statusMsg.style.background = 'rgba(245,158,11,0.1)';
+          statusMsg.style.color = '#fbbf24';
+
+          const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          ]);
+          verifyModelsLoaded = true;
+        }
+      } catch(modelErr) {
+        console.error('Model loading error:', modelErr);
+        statusMsg.innerHTML = '❌ Gagal memuat model AI. Periksa koneksi internet Anda.';
+        statusMsg.style.borderColor = 'rgba(239,68,68,0.3)';
+        statusMsg.style.background = 'rgba(239,68,68,0.1)';
+        statusMsg.style.color = '#fca5a5';
+        startBtn.textContent = '🔄 Coba Lagi';
+        startBtn.disabled = false;
+        startBtn.onclick = () => startFaceVerification();
+        return;
+      }
+
+      // Step 3: Extract face descriptor from registration photo
+      let regDescriptor = null;
+      try {
+        statusMsg.innerHTML = '🔍 Memproses foto registrasi...';
+        const regImg = document.getElementById('verifyRegPhoto');
+        if (regImg && regImg.src && regImg.style.display !== 'none') {
+          const regDetection = await faceapi
+            .detectSingleFace(regImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.3 }))
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+          if (regDetection) {
+            regDescriptor = regDetection.descriptor;
+            console.log('[Verify] Registration face descriptor extracted');
+          } else {
+            console.warn('[Verify] Could not extract face from registration photo');
+          }
+        }
+      } catch(e) {
+        console.warn('[Verify] Registration descriptor extraction failed:', e);
+      }
+
+      // Step 4: Start face detection & comparison loop
+      startBtn.textContent = '🔍 Mendeteksi wajah...';
+      statusMsg.innerHTML = '🔍 Arahkan wajah Anda ke kamera dan tetap diam...';
+      statusMsg.style.borderColor = 'rgba(59,130,246,0.3)';
+      statusMsg.style.background = 'rgba(59,130,246,0.1)';
+      statusMsg.style.color = '#93c5fd';
+      document.getElementById('verifyScanOverlay').style.display = 'block';
+
+      // Auto-detection loop
+      let attempts = 0;
+      const maxAttempts = 30;
+      const MATCH_THRESHOLD = 0.6; // Lower = stricter (0.6 is standard)
+
+      verifyDetectLoop = setInterval(async () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          clearInterval(verifyDetectLoop);
+          statusMsg.innerHTML = '❌ Wajah tidak terdeteksi. Pastikan pencahayaan cukup dan wajah terlihat jelas.';
+          statusMsg.style.borderColor = 'rgba(239,68,68,0.3)';
+          statusMsg.style.background = 'rgba(239,68,68,0.1)';
+          statusMsg.style.color = '#fca5a5';
+          document.getElementById('verifyScanOverlay').style.display = 'none';
+          startBtn.style.display = 'none';
+          document.getElementById('verifyRetryBtn').style.display = 'inline-flex';
+          return;
+        }
+
+        if (video.readyState < 2) return;
+
+        try {
+          const detections = await faceapi
+            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceDescriptors()
+            .withFaceExpressions();
+
+          if (detections.length === 1) {
+            clearInterval(verifyDetectLoop);
+            const det = detections[0];
+            const score = det.detection.score;
+            const liveDescriptor = det.descriptor;
+
+            // ---- FACE COMPARISON ----
+            let matchDistance = null;
+            let matchPercent = 0;
+            let isMatch = false;
+
+            if (regDescriptor && liveDescriptor) {
+              matchDistance = faceapi.euclideanDistance(regDescriptor, liveDescriptor);
+              matchPercent = Math.round(Math.max(0, (1 - matchDistance)) * 100);
+              isMatch = matchPercent >= 50; // ≥50% = COCOK, <50% = GAGAL
+              console.log(`[Verify] Face match distance: ${matchDistance.toFixed(3)}, percent: ${matchPercent}%, match: ${isMatch}`);
+            } else {
+              // No registration photo — allow but warn
+              isMatch = true;
+              matchPercent = 0;
+              console.warn('[Verify] No registration descriptor — skipping comparison');
+            }
+
+            // Capture the photo
+            const canvas = document.getElementById('verifyCanvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            // Draw face detection box
+            const box = det.detection.box;
+            ctx.strokeStyle = isMatch ? '#10B981' : '#EF4444';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
+            ctx.fillStyle = isMatch ? '#10B981' : '#EF4444';
+            ctx.font = 'bold 14px Inter, sans-serif';
+            ctx.fillText(isMatch ? '✓ Wajah Cocok' : '✗ Wajah Tidak Cocok', box.x, box.y - 8);
+
+            // Save the image
+            capturedPhotoPresensi = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Show canvas with detection overlay, hide video
+            canvas.style.display = 'block';
+            video.style.display = 'none';
+            document.getElementById('verifyScanOverlay').style.display = 'none';
+            stopVerifyCamera();
+
+            if (isMatch) {
+              // ---- MATCH: Proceed to step 2 ----
+              document.getElementById('verifyStep1').style.display = 'none';
+              document.getElementById('verifyStep2').style.display = 'block';
+
+              document.getElementById('verifyResultLive').src = capturedPhotoPresensi;
+              const regImgEl = document.getElementById('verifyRegPhoto');
+              document.getElementById('verifyResultReg').src = regImgEl.src || '';
+
+              // Confidence info badges
+              const matchColor = matchPercent >= 70 ? '#10B981' : matchPercent >= 50 ? '#F59E0B' : '#EF4444';
+              document.getElementById('verifyConfInfo').innerHTML = `
+                <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:8px 16px;text-align:center;">
+                  <div style="font-size:0.7rem;color:#10B981;margin-bottom:2px;">Kecocokan Wajah</div>
+                  <div style="font-weight:700;color:#fff;">${matchPercent > 0 ? matchPercent + '%' : 'N/A'}</div>
+                </div>
+                <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:8px 16px;text-align:center;">
+                  <div style="font-size:0.7rem;color:#3B82F6;margin-bottom:2px;">Confidence</div>
+                  <div style="font-weight:700;color:#fff;">${Math.round(score * 100)}%</div>
+                </div>
+                <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:8px;padding:8px 16px;text-align:center;">
+                  <div style="font-size:0.7rem;color:#8B5CF6;margin-bottom:2px;">Landmark</div>
+                  <div style="font-weight:700;color:#fff;">${det.landmarks ? det.landmarks.positions.length : 0} titik</div>
+                </div>
+              `;
+            } else {
+              // ---- NO MATCH: Block access ----
+              document.getElementById('verifyStep1').style.display = 'none';
+              document.getElementById('verifyStep2').style.display = 'block';
+
+              document.getElementById('verifyResultLive').src = capturedPhotoPresensi;
+              const regImgEl = document.getElementById('verifyRegPhoto');
+              document.getElementById('verifyResultReg').src = regImgEl.src || '';
+
+              // Override step 2 with FAILED state
+              document.getElementById('verifyConfInfo').innerHTML = `
+                <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:8px 16px;text-align:center;">
+                  <div style="font-size:0.7rem;color:#EF4444;margin-bottom:2px;">Kecocokan Wajah</div>
+                  <div style="font-weight:700;color:#fff;">${matchPercent}%</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:8px 16px;text-align:center;">
+                  <div style="font-size:0.7rem;color:#EF4444;margin-bottom:2px;">Status</div>
+                  <div style="font-weight:700;color:#EF4444;">TIDAK COCOK</div>
+                </div>
+              `;
+
+              // Change the success message to failure
+              const step2El = document.getElementById('verifyStep2');
+              const successIcon = step2El.querySelector('div[style*="font-size:3.5rem"]');
+              if (successIcon) successIcon.innerHTML = '❌';
+              const successTitle = step2El.querySelector('h2');
+              if (successTitle) {
+                successTitle.textContent = 'Verifikasi Gagal';
+                successTitle.style.color = '#EF4444';
+              }
+              const successDesc = step2El.querySelector('p');
+              if (successDesc) successDesc.textContent = 'Wajah Anda TIDAK cocok dengan data registrasi. Anda tidak dapat melanjutkan ujian.';
+
+              // Hide the "Mulai Ujian" button and show retry
+              const mulaiBtn = document.getElementById('verifyProceedBtn');
+              if (mulaiBtn) mulaiBtn.style.display = 'none';
+
+              // Add a retry button
+              document.getElementById('verifyConfInfo').innerHTML += `
+                <div style="grid-column: 1/-1; margin-top:12px;">
+                  <button onclick="retryFaceVerification()" style="background:linear-gradient(135deg,#F59E0B,#EF4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;width:100%;">
+                    🔄 Coba Lagi Verifikasi
+                  </button>
+                </div>
+              `;
+            }
+
+          } else if (detections.length > 1) {
+            clearInterval(verifyDetectLoop);
+            statusMsg.innerHTML = '👥 Terdeteksi lebih dari 1 wajah! Pastikan hanya Anda yang terlihat di kamera.';
+            statusMsg.style.borderColor = 'rgba(239,68,68,0.3)';
+            statusMsg.style.background = 'rgba(239,68,68,0.1)';
+            statusMsg.style.color = '#fca5a5';
+            document.getElementById('verifyScanOverlay').style.display = 'none';
+            startBtn.style.display = 'none';
+            document.getElementById('verifyRetryBtn').style.display = 'inline-flex';
+          }
+        } catch(err) {
+          console.error('Verification detection error:', err);
+        }
+      }, 600);
+    }
+
+    function stopVerifyCamera() {
+      if (verifyCameraStream) {
+        verifyCameraStream.getTracks().forEach(t => t.stop());
+        verifyCameraStream = null;
+      }
+    }
+
+    function retryFaceVerification() {
+      if (verifyDetectLoop) clearInterval(verifyDetectLoop);
+      stopVerifyCamera();
+
+      const video = document.getElementById('verifyVideo');
+      const canvas = document.getElementById('verifyCanvas');
+      video.style.display = 'none';
+      canvas.style.display = 'none';
+      video.srcObject = null;
+
+      document.getElementById('verifyCamPlaceholder').style.display = 'flex';
+      document.getElementById('verifyScanOverlay').style.display = 'none';
+      document.getElementById('verifyRetryBtn').style.display = 'none';
+
+      const startBtn = document.getElementById('verifyStartBtn');
+      startBtn.style.display = 'inline-flex';
+      startBtn.textContent = '📷 Mulai Pemindaian Wajah';
+      startBtn.disabled = false;
+
+      const statusMsg = document.getElementById('verifyStatusMsg');
+      statusMsg.innerHTML = 'ℹ️ Tekan tombol di bawah untuk memulai pemindaian wajah';
+      statusMsg.style.borderColor = 'rgba(59,130,246,0.2)';
+      statusMsg.style.background = 'rgba(59,130,246,0.1)';
+      statusMsg.style.color = '#93c5fd';
+
+      document.getElementById('verifyStep1').style.display = 'block';
+      document.getElementById('verifyStep2').style.display = 'none';
+
+      startFaceVerification();
+    }
+
+    function proceedToExam() {
+      // Hide verification overlay
+      document.getElementById('verificationOverlay').style.display = 'none';
+
+      // Show exam UI
+      document.getElementById('examTimer').style.visibility = '';
+      document.querySelector('.exam-body').style.display = '';
+
+      // Initialize exam
+      timeRemaining = exam.duration * 60;
+      initTimer();
+      renderQuestion();
+      renderNav();
+
+      if (exam.proctoring) {
+        initProctoring();
+      }
+    }
+
+    // ---- Timer ----
+    function initTimer() {
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          App.toast('Waktu habis! Ujian akan disubmit otomatis.', 'danger');
+          setTimeout(() => submitExam(), 2000);
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const h = Math.floor(timeRemaining / 3600);
+      const m = Math.floor((timeRemaining % 3600) / 60);
+      const s = timeRemaining % 60;
+      const display = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      document.getElementById('timerDisplay').textContent = display;
+
+      const timerEl = document.getElementById('examTimer');
+      if (timeRemaining <= 300) {
+        timerEl.style.borderColor = '#EF4444';
+        timerEl.style.color = '#EF4444';
+      } else if (timeRemaining <= 600) {
+        timerEl.style.borderColor = '#F59E0B';
+        timerEl.style.color = '#F59E0B';
+      } else {
+        timerEl.style.borderColor = '#D4A843';
+        timerEl.style.color = '#D4A843';
+      }
+    }
+
+    async function initProctoring() {
+      const panel = document.getElementById('proctorPanel');
+      panel.style.display = 'block';
+
+      // Set student NIM for live frame sharing
+      Proctor._studentNim = user.nim;
+
+      const video = document.getElementById('proctorVideo');
+      const canvas = document.getElementById('proctorCanvas');
+
+      document.getElementById('statusText').textContent = 'Memuat AI...';
+
+      const cameraOk = await Proctor.startCamera(video, canvas);
+      if (!cameraOk) {
+        document.getElementById('statusText').textContent = 'Kamera error';
+        App.toast('Gagal mengakses kamera untuk proctoring', 'danger');
+        return;
+      }
+
+      document.getElementById('statusText').textContent = 'Memuat AI...';
+
+      // Set up callbacks
+      Proctor.onStatusChange = (status) => {
+        const text = document.getElementById('statusText');
+        if (status === 'active') {
+          text.textContent = 'Wajah Terdeteksi';
+          text.style.color = '#10B981';
+        } else if (status === 'no_face') {
+          text.textContent = 'Wajah Hilang!';
+          text.style.color = '#EF4444';
+        } else if (status === 'multiple_faces') {
+          text.textContent = '2+ Wajah!';
+          text.style.color = '#EF4444';
+        } else if (status === 'gaze_away') {
+          text.textContent = '👁 Menyimpang!';
+          text.style.color = '#F59E0B';
+        }
+      };
+
+      Proctor.onExpressionUpdate = (data) => {
+        if (data.allExpressions) {
+          // Accumulate totals for session-wide average
+          exprSampleCount++;
+          for (const [expr, val] of Object.entries(data.allExpressions)) {
+            if (exprTotals[expr] !== undefined) {
+              exprTotals[expr] += val;
+            }
+          }
+          renderExprBars();
+          // Update current expression for live frame sharing
+          Proctor._currentExpression = { emoji: data.emoji, label: data.label, confidence: data.confidence };
+        }
+      };
+
+      const MAX_VIOLATIONS = 5;
+
+      Proctor.onViolation = (violation, count) => {
+        document.getElementById('violationCount').textContent = `${count} / ${MAX_VIOLATIONS}`;
+
+        // Update progress bar
+        const progressPct = Math.min((count / MAX_VIOLATIONS) * 100, 100);
+        const progressFill = document.getElementById('violationProgressFill');
+        if (progressFill) progressFill.style.width = `${progressPct}%`;
+
+        // Change color intensity based on violation count
+        const countEl = document.getElementById('violationCount');
+        if (count >= 4) {
+          countEl.style.color = '#EF4444';
+          countEl.style.animation = 'pulse 1s ease-in-out infinite';
+        } else if (count >= 3) {
+          countEl.style.color = '#F59E0B';
+        }
+
+        // Update individual stat counters
+        const statMap = {
+          no_face: 'statNoFace',
+          multiple_faces: 'statMulti',
+          tab_switch: 'statTab',
+          gaze_away: 'statFace',
+          split_screen: 'statSplit',
+        };
+        const statId = statMap[violation.type];
+        if (statId) {
+          const el = document.getElementById(statId);
+          if (el) el.textContent = parseInt(el.textContent) + 1;
+        }
+
+        // Add to violation log
+        const logEl = document.getElementById('violationLog');
+        const now = new Date();
+        const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        const icons = { no_face: '👻', multiple_faces: '👥', tab_switch: '❌', gaze_away: '😐', split_screen: '🖥' };
+        const colors = { no_face: '#F59E0B', multiple_faces: '#3B82F6', tab_switch: '#EF4444', gaze_away: '#F59E0B', split_screen: '#06B6D4' };
+        const icon = icons[violation.type] || '⚠️';
+        const color = colors[violation.type] || '#EF4444';
+
+        // Remove empty state message if first violation
+        if (count === 1) logEl.innerHTML = '';
+
+        const entry = document.createElement('div');
+        entry.style.cssText = `display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:4px;border-radius:6px;background:${color}08;border-left:3px solid ${color};`;
+        entry.innerHTML = `<span style="color:${color};font-weight:700;">${icon}</span><span style="flex:1;">${violation.desc}</span><span style="color:#aaa;font-size:0.65rem;white-space:nowrap;">${time}</span>`;
+        logEl.prepend(entry);
+        logEl.scrollTop = 0;
+
+        App.toast(`⚠ Pelanggaran ${count}/${MAX_VIOLATIONS}: ${violation.desc}`, 'warning');
+
+        // === AUTO-SUBMIT when max violations reached ===
+        if (count >= MAX_VIOLATIONS) {
+          // Show full-screen force submit overlay
+          const overlay = document.createElement('div');
+          overlay.id = 'forceSubmitOverlay';
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.95);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);animation:fadeIn 0.3s ease;';
+          overlay.innerHTML = `
+            <div style="text-align:center;max-width:500px;padding:40px;">
+              <div style="font-size:4rem;margin-bottom:16px;animation:pulse 1s ease-in-out infinite;">🚫</div>
+              <h2 style="color:#EF4444;font-size:1.8rem;margin:0 0 12px;font-weight:800;">Batas Pelanggaran Tercapai!</h2>
+              <p style="color:rgba(255,255,255,0.7);font-size:1rem;margin:0 0 8px;line-height:1.6;">Anda telah melakukan <strong style="color:#EF4444;">${MAX_VIOLATIONS} pelanggaran</strong> selama ujian.</p>
+              <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin:0 0 24px;">Ujian akan disubmit otomatis dengan jawaban yang sudah Anda isi.</p>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
+                ${Proctor.violations.map(v => {
+                  const vIcon = icons[v.type] || '⚠️';
+                  const vColor = colors[v.type] || '#EF4444';
+                  const vTime = new Date(v.time);
+                  const vTimeStr = vTime.getHours().toString().padStart(2,'0') + ':' + vTime.getMinutes().toString().padStart(2,'0') + ':' + vTime.getSeconds().toString().padStart(2,'0');
+                  return '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px 12px;font-size:0.75rem;color:#fca5a5;">' + vIcon + ' ' + v.desc + ' <span style="opacity:0.6;">(' + vTimeStr + ')</span></div>';
+                }).join('')}
+              </div>
+              <div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px;">
+                <div style="font-size:0.85rem;color:#fca5a5;">⏳ Mengumpulkan ujian otomatis dalam...</div>
+                <div id="forceCountdown" style="font-size:2.5rem;font-weight:900;color:#EF4444;margin-top:8px;">5</div>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(overlay);
+
+          // Add fadeIn animation if not already present
+          if (!document.getElementById('forceSubmitStyles')) {
+            const style = document.createElement('style');
+            style.id = 'forceSubmitStyles';
+            style.textContent = '@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }';
+            document.head.appendChild(style);
+          }
+
+          // Countdown then auto-submit
+          let countdown = 5;
+          const cdEl = document.getElementById('forceCountdown');
+          const cdInterval = setInterval(() => {
+            countdown--;
+            if (cdEl) cdEl.textContent = countdown;
+            if (countdown <= 0) {
+              clearInterval(cdInterval);
+              submitExam();
+            }
+          }, 1000);
+        }
+      };
+
+      const started = await Proctor.startDetection(600);
+      if (started) {
+        document.getElementById('statusText').textContent = 'Aktif';
+        document.getElementById('statusText').style.color = '#10B981';
+        App.toast('Proctoring aktif — kamera dan deteksi wajah berjalan', 'info');
+      }
+    }
+
+    function renderExprBars() {
+      const barsEl = document.getElementById('expressionBars');
+      if (!barsEl || exprSampleCount === 0) return;
+      const emojis = {
+        happy: '😊', sad: '😢', angry: '😠', surprised: '😲',
+        fearful: '😨', disgusted: '🤢', neutral: '😐'
+      };
+      const labels = {
+        happy: 'Senang', sad: 'Sedih', angry: 'Marah', surprised: 'Terkejut',
+        fearful: 'Takut', disgusted: 'Jijik', neutral: 'Netral'
+      };
+      const colors = {
+        happy: '#10B981', sad: '#3B82F6', angry: '#EF4444', surprised: '#F59E0B',
+        fearful: '#8B5CF6', disgusted: '#EC4899', neutral: '#6B7280'
+      };
+
+      // Calculate session-wide average for each expression
+      const averages = {};
+      let totalAvg = 0;
+      for (const expr of Object.keys(exprTotals)) {
+        averages[expr] = exprTotals[expr] / exprSampleCount;
+        totalAvg += averages[expr];
+      }
+
+      // Normalize so they sum to 100%
+      const sorted = Object.entries(averages).sort((a, b) => b[1] - a[1]);
+
+      barsEl.innerHTML = '<div style="font-size:0.6rem;color:#888;font-weight:700;margin-bottom:2px;">Reaksi Wajah (Total)</div>' +
+        sorted.map(([expr, val]) => {
+          const pct = totalAvg > 0 ? Math.round((val / totalAvg) * 100) : 0;
+          const color = colors[expr] || '#6B7280';
+          const emoji = emojis[expr] || '😐';
+          const label = labels[expr] || expr;
+          return `<div style="display:flex;align-items:center;gap:3px;" title="${label}">
+            <span style="font-size:0.65rem;width:14px;text-align:center;">${emoji}</span>
+            <div style="flex:1;height:5px;background:#eee;border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width 0.3s;"></div>
+            </div>
+            <span style="font-size:0.55rem;width:24px;text-align:right;color:${color};font-weight:700;">${pct}%</span>
+          </div>`;
+        }).join('');
+    }
+
+    // ---- Questions ----
+    function renderQuestion() {
+      const q = exam.questions[currentQuestion];
+      const content = document.getElementById('questionContent');
+
+      let optionsHTML = '';
+      if (q.type === 'multiple') {
+        optionsHTML = `
+          <div class="opt-list">
+            ${q.options.map((opt, i) => `
+              <div class="opt-item ${answers[q.id] === i ? 'selected' : ''}" onclick="selectOption('${q.id}', ${i})">
+                <div class="opt-radio"></div>
+                <span>${String.fromCharCode(65 + i)}. ${opt}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        optionsHTML = `
+          <div style="margin-bottom:0;">
+            <textarea style="width:100%;min-height:160px;border:2px solid #e5e7eb;border-radius:12px;padding:16px;font-size:0.95rem;resize:vertical;" placeholder="Tulis jawaban Anda di sini..."
+              onchange="answers['${q.id}']=this.value"
+              oninput="answers['${q.id}']=this.value">${answers[q.id] || ''}</textarea>
+          </div>
+        `;
+      }
+
+      const isRagu = doubts[q.id];
+      const raguStyle = isRagu
+        ? 'background:#E65100;color:#fff;border:2px solid #E65100;'
+        : 'background:#FFF3E0;color:#E65100;border:2px solid #FFB74D;';
+
+      content.innerHTML = `
+        <div class="q-header">
+          <span class="q-number">Soal ${currentQuestion + 1} dari ${exam.questions.length}</span>
+          <button onclick="toggleDoubt('${q.id}')" style="padding:6px 14px;border-radius:8px;font-size:0.78rem;font-weight:700;${raguStyle}cursor:pointer;transition:all 0.2s;">🚩 ${isRagu ? 'Ditandai Ragu' : 'Ragu-ragu'}</button>
+        </div>
+        <div class="q-text">${q.text.replace(/\n/g, '<br>')}</div>
+        ${optionsHTML}
+      `;
+
+      // Navigation buttons
+      document.getElementById('prevBtn').disabled = currentQuestion === 0;
+      document.getElementById('prevBtn').style.opacity = currentQuestion === 0 ? '0.5' : '1';
+
+      const nextBtn = document.getElementById('nextBtn');
+      if (currentQuestion === exam.questions.length - 1) {
+        nextBtn.textContent = '📤 Kumpulkan Ujian';
+        nextBtn.onclick = () => confirmSubmit();
+      } else {
+        nextBtn.textContent = 'Selanjutnya →';
+        nextBtn.onclick = () => navigateQuestion(1);
+      }
+
+      updateNav();
+    }
+
+    function selectOption(qId, optIdx) {
+      answers[qId] = optIdx;
+      renderQuestion();
+    }
+
+    function toggleDoubt(qId) {
+      doubts[qId] = !doubts[qId];
+      renderQuestion();
+    }
+
+    function navigateQuestion(dir) {
+      const next = currentQuestion + dir;
+      if (next >= 0 && next < exam.questions.length) {
+        currentQuestion = next;
+        renderQuestion();
+      }
+    }
+
+    function goToQuestion(idx) {
+      currentQuestion = idx;
+      renderQuestion();
+    }
+
+    // ---- Navigator ----
+    function renderNav() {
+      const nav = document.getElementById('questionNav');
+      nav.innerHTML = exam.questions.map((q, i) => `
+        <button class="nav-dot" id="qdot-${i}" onclick="goToQuestion(${i})">${i + 1}</button>
+      `).join('');
+      updateNav();
+    }
+
+    function updateNav() {
+      exam.questions.forEach((q, i) => {
+        const dot = document.getElementById(`qdot-${i}`);
+        if (!dot) return;
+        dot.className = 'nav-dot';
+        if (i === currentQuestion) dot.classList.add('current');
+        else if (doubts[q.id]) dot.classList.add('ragu');
+        else if (answers[q.id] !== undefined) dot.classList.add('answered');
+      });
+    }
+
+    // ---- Submit ----
+    function confirmSubmit() {
+      const total = exam.questions.length;
+      const answered = Object.keys(answers).length;
+      const unanswered = total - answered;
+
+      document.getElementById('modalAnswerInfo').innerHTML = `
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span>Total soal:</span><strong>${total}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="color:var(--success);">Dijawab:</span><strong style="color:var(--success);">${answered}</strong>
+        </div>
+        ${unanswered > 0 ? `
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--danger);">Belum dijawab:</span><strong style="color:var(--danger);">${unanswered}</strong>
+        </div>` : ''}
+      `;
+
+      document.getElementById('submitModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('submitModal').classList.remove('active');
+    }
+
+    async function submitExam() {
+      clearInterval(timerInterval);
+      Proctor.stopDetection();
+
+      let score = 0;
+      let totalPoints = 0;
+      exam.questions.forEach(q => {
+        totalPoints += q.points;
+        if (q.type === 'multiple') {
+          if (answers[q.id] === q.answer) {
+            score += q.points;
+          }
+        } else {
+          if (answers[q.id] && answers[q.id].trim().length > 10) {
+            score += Math.round(q.points * 0.7);
+          }
+        }
+      });
+
+      const finalScore = Math.round((score / totalPoints) * 100);
+
+      // Calculate final expression percentages
+      const finalExpressions = {};
+      if (exprSampleCount > 0) {
+        let totalAvg = 0;
+        for (const expr of Object.keys(exprTotals)) {
+          totalAvg += (exprTotals[expr] / exprSampleCount);
+        }
+        if (totalAvg > 0) {
+          for (const expr of Object.keys(exprTotals)) {
+            const pct = Math.round(((exprTotals[expr] / exprSampleCount) / totalAvg) * 100);
+            if (pct > 0) finalExpressions[expr] = pct;
+          }
+        }
+      }
+
+      const result = {
+        examId: exam.id,
+        studentId: user.nim,
+        studentName: user.name,
+        score: finalScore,
+        answers: { ...answers },
+        violations: [...Proctor.violations],
+        expressions: finalExpressions,
+        timeUsed: (exam.duration * 60) - timeRemaining,
+        photoPresensi: capturedPhotoPresensi
+      };
+
+      await App.addResult(result);
+      App.toast('Ujian berhasil disubmit! Data tersimpan.', 'success');
+
+      setTimeout(() => {
+        window.location.href = `exam-results.html?id=${exam.id}`;
+      }, 2000);
+    }
+
+    // Prevent accidental navigation
+    window.addEventListener('beforeunload', (e) => {
+      if (timerInterval) {
+        e.preventDefault();
+        e.returnValue = 'Ujian sedang berlangsung. Yakin ingin keluar?';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dashboard Dosen — UNNES LMS">
+  <title>Dashboard Dosen — UNNES LMS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Lecturer Dashboard Styles */
+    .lec-header {
+      background: linear-gradient(135deg, #D4A843 0%, #E6BC5A 50%, #D4A843 100%);
+      padding: 28px 32px 32px;
+      color: #fff;
+      position: relative;
+    }
+    .lec-header-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .lec-brand { display: flex; align-items: center; gap: 14px; }
+    .lec-brand img {
+      width: 52px; height: 52px; object-fit: contain;
+      background: rgba(255,255,255,0.2); border-radius: 12px; padding: 6px;
+    }
+    .lec-brand h1 { font-size: 1.2rem; font-weight: 800; margin: 0; }
+    .lec-brand .sub { font-size: 0.82rem; opacity: 0.9; margin: 2px 0 0; }
+    .lec-brand .fak { font-size: 0.72rem; opacity: 0.7; }
+    .lec-right { display: flex; align-items: center; gap: 16px; text-align: right; }
+    .lec-right .uname { font-weight: 700; font-size: 0.92rem; }
+    .lec-right .urole { font-size: 0.75rem; opacity: 0.8; }
+    .btn-logout-lec {
+      background: #fff; color: #D4A843; border: none; padding: 8px 18px;
+      border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+    }
+    .btn-logout-lec:hover { background: #f0f0f0; transform: translateY(-1px); }
+
+    /* Stats Grid */
+    .lec-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; position: relative; z-index: 2; }
+    .lec-stat-card {
+      background: linear-gradient(135deg, #F0C850 0%, #E6BC5A 100%);
+      border-radius: 14px; padding: 22px 24px; color: #fff;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: 0 4px 16px rgba(212,168,67,0.25);
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+    .lec-stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(212,168,67,0.4); }
+    .lec-stat-card.active { border-color: #1B3A6B; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,58,107,0.2); }
+    .lec-stat-icon { font-size: 1.6rem; opacity: 0.9; }
+    .lec-stat-num { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+    .lec-stat-label { font-size: 0.85rem; opacity: 0.9; margin-top: 2px; }
+
+    /* Body */
+    .lec-body { background: #f5f6fa; min-height: calc(100vh - 200px); padding: 32px; }
+    .lec-container { max-width: 1100px; margin: 0 auto; }
+
+    /* Tab Bar */
+    .lec-tabs {
+      display: flex; gap: 4px; border-bottom: 2px solid #e8e8e8;
+      margin-bottom: 28px; flex-wrap: nowrap; overflow-x: auto;
+      padding-bottom: 4px; /* for scrollbar */
+      -webkit-overflow-scrolling: touch;
+    }
+    .lec-tabs::-webkit-scrollbar { height: 4px; }
+    .lec-tabs::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+    .lec-tab {
+      padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #888;
+      cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -6px;
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+      background: none; border-top: none; border-left: none; border-right: none;
+      white-space: nowrap;
+    }
+    .lec-tab:hover { color: #D4A843; }
+    .lec-tab.active { color: #D4A843; border-bottom-color: #D4A843; }
+
+    /* Content Panel */
+    .lec-panel {
+      background: #fff; border-radius: 16px; padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04); display: none;
+    }
+    .lec-panel.active { display: block; }
+    .lec-panel h3 { font-size: 1.1rem; font-weight: 800; color: #222; margin: 0 0 16px; }
+
+    /* Action Buttons */
+    .btn-edit {
+      background: #F0C850; color: #fff; border: none; padding: 6px 14px;
+      border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 4px; margin-bottom: 4px;
+    }
+    .btn-hapus {
+      background: #EF4444; color: #fff; border: none; padding: 6px 14px;
+      border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+
+    @media (max-width: 1024px) {
+      .lec-stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .lec-stats-grid { grid-template-columns: 1fr; }
+      .lec-header-inner { flex-direction: column; gap: 16px; }
+      .lec-right { text-align: left; }
+    }
+
+    /* Live Monitor Styles */
+    .live-indicator {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      background: #EF4444; box-shadow: 0 0 8px #EF4444;
+      animation: pulseRed 1.5s infinite;
+    }
+    @keyframes pulseRed {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .cam-box {
+      background: #111; border-radius: 12px; overflow: hidden; position: relative;
+      aspect-ratio: 4/3; border: 2px solid #333; transition: border-color 0.3s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .cam-box.warning { border-color: #EF4444; }
+    .cam-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; filter: grayscale(20%); }
+    .cam-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 12px 10px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85)); color: #fff;
+    }
+    .cam-name { font-size: 0.85rem; font-weight: 700; display:block; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+    .cam-status {
+      display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;
+      background: rgba(255,255,255,0.25); backdrop-filter: blur(4px);
+    }
+    .face-box {
+      position: absolute; border: 2px dashed #10B981; border-radius: 8px;
+      top: 15%; left: 25%; width: 50%; height: 60%;
+      box-shadow: inset 0 0 16px rgba(16, 185, 129, 0.2); transition: all 0.5s ease;
+    }
+    .face-box.sad { border-color: #3B82F6; box-shadow: inset 0 0 16px rgba(59, 130, 246, 0.2); }
+    .face-box.fear { border-color: #F59E0B; box-shadow: inset 0 0 16px rgba(245, 158, 11, 0.2); }
+    .face-label {
+      position: absolute; top: -22px; left: -2px; background: #10B981; color: #fff;
+      font-size: 0.7rem; padding: 2px 8px; border-radius: 4px 4px 4px 0; font-weight: 800; white-space: nowrap;
+      transition: background 0.5s ease;
+    }
+    .face-box.sad .face-label { background: #3B82F6; }
+    .face-box.fear .face-label { background: #F59E0B; }
+  </style>
+</head>
+<body>
+  <!-- Golden Header -->
+  <div class="lec-header">
+    <div class="lec-header-inner">
+      <div class="lec-brand">
+        <img src="assets/logo.png" alt="UNNES">
+        <div>
+          <h1>Universitas Negeri Semarang</h1>
+          <div class="sub">Panel Admin Dosen</div>
+          <div class="fak" id="headerFak">Fakultas Ilmu Pendidikan</div>
+        </div>
+      </div>
+      <div class="lec-right">
+        <div>
+          <div class="uname" id="navName">Admin Dosen</div>
+          <div class="urole">Administrator</div>
+        </div>
+        <button class="btn-logout-lec" onclick="App.logout()">🚪 Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="lec-body">
+    <div class="lec-container">
+      
+      <!-- Greeting -->
+      <div style="margin-bottom: 24px; animation: slideUp 0.4s ease-out; animation-fill-mode: both;">
+        <h2 style="font-size: 1.4rem; color: #1B3A6B; margin: 0 0 4px;"><span id="lecGreeting">Selamat Pagi</span>! 👋</h2>
+        <p style="color: #666; font-size: 0.9rem; margin: 0;">Sistem Pengelolaan Ujian Mahasiswa</p>
+      </div>
+
+      <!-- Stats Cards (Activity Buttons) -->
+      <div class="lec-stats-grid" id="mainActivityButtons">
+        <div class="lec-stat-card animate-in" style="cursor:pointer;" onclick="switchLecTab('exams')">
+          <div class="lec-stat-icon">📋</div>
+          <div>
+            <div class="lec-stat-num" id="statTotal">0</div>
+            <div class="lec-stat-label">Kelola Ujian</div>
+          </div>
+        </div>
+        <div class="lec-stat-card animate-in" id="cardCreate" style="cursor:pointer;" onclick="switchLecTab('create')">
+          <div class="lec-stat-icon">➕</div>
+          <div>
+            <div class="lec-stat-num" style="font-size:1.5rem;margin-top:4px;">Baru</div>
+            <div class="lec-stat-label">Buat Ujian Baru</div>
+          </div>
+        </div>
+        <div class="lec-stat-card animate-in" style="cursor:pointer;" onclick="switchLecTab('students')">
+          <div class="lec-stat-icon">👥</div>
+          <div>
+            <div class="lec-stat-num" id="statStudents">0</div>
+            <div class="lec-stat-label">Data Mahasiswa</div>
+          </div>
+        </div>
+        <div class="lec-stat-card animate-in" style="cursor:pointer;" onclick="switchLecTab('attendance')">
+          <div class="lec-stat-icon">📅</div>
+          <div>
+            <div class="lec-stat-num" style="font-size:1.5rem;margin-top:4px;">Log</div>
+            <div class="lec-stat-label">Laporan Presensi Mahasiswa</div>
+          </div>
+        </div>
+        <div class="lec-stat-card animate-in" style="cursor:pointer;" onclick="switchLecTab('results')">
+          <div class="lec-stat-icon">📊</div>
+          <div>
+            <div class="lec-stat-num" id="statResults">0</div>
+            <div class="lec-stat-label">Hasil Seluruh Ujian</div>
+          </div>
+        </div>
+        <div class="lec-stat-card animate-in" style="cursor:pointer;" onclick="showGlobalMonitor()">
+          <div class="lec-stat-icon">👁️</div>
+          <div>
+            <div class="lec-stat-num" style="font-size:1.4rem;margin-top:4px;color:#fff;"><span class="live-indicator"></span> Live</div>
+            <div class="lec-stat-label">Monitor Proctoring</div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Panel: Kelola Ujian -->
+      <div class="lec-panel active" id="panelExams">
+        <h3>Daftar Ujian</h3>
+        <div id="myExams"></div>
+      </div>
+
+      <!-- Panel: Buat/Edit Ujian -->
+      <div class="lec-panel" id="panelCreate">
+        <!-- existing form -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3 id="formTitle">Buat Ujian Baru</h3>
+          <button type="button" class="btn btn-outline btn-sm" onclick="switchLecTab('exams')">Batal</button>
+        </div>
+        
+        <form id="examForm" onsubmit="handleSaveExam(event)">
+          <input type="hidden" id="editExamId" value="">
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div class="form-group">
+              <label class="form-label">Judul Ujian</label>
+              <input type="text" class="form-input" id="examTitle" placeholder="Misal: UTS Algoritma" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mata Kuliah</label>
+              <input type="text" class="form-input" id="examCourse" placeholder="Nama mata kuliah" required>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div class="form-group">
+              <label class="form-label">Durasi (menit)</label>
+              <input type="number" class="form-input" id="examDuration" placeholder="90" min="5" max="300" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Waktu Mulai</label>
+              <input type="datetime-local" class="form-input" id="examDate" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Waktu Selesai</label>
+              <input type="datetime-local" class="form-input" id="examEndDate" required>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:#f9f9f9;border-radius:8px;border:1px solid #eee;margin-bottom:24px;">
+            <div>
+              <strong style="font-size:0.95rem;color:#1B3A6B;">🛡️ AI Proctoring</strong>
+              <p style="font-size:0.8rem;color:#888;margin:2px 0 0;">Aktifkan monitoring kamera & deteksi wajah</p>
+            </div>
+            <label style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;">
+              <input type="checkbox" id="proctoring" checked style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:#10B981;border-radius:24px;transition:0.3s;" id="toggleBg"></span>
+              <span style="position:absolute;top:3px;left:27px;width:22px;height:22px;background:#fff;border-radius:50%;transition:0.3s;" id="toggleDot"></span>
+            </label>
+          </div>
+
+          <div class="form-group" id="examStatusGroup" style="display:none; margin-bottom:16px;">
+            <label class="form-label">Ubah Status Ujian</label>
+            <select class="form-select" id="examStatus">
+              <option value="upcoming">Draft (Ujian Akan Datang)</option>
+              <option value="active">Aktifkan (Ujian Aktif)</option>
+              <option value="completed">Selesai (Ujian Selesai)</option>
+            </select>
+          </div>
+
+          <div id="questionSection">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-top:16px;border-top:1px solid #eee;">
+              <h4 style="font-size:1.05rem;font-weight:700;margin:0;">❓ Daftar Soal</h4>
+              <div style="display:flex;gap:8px;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="addQuestion('multiple')">➕ Pilihan Ganda</button>
+                <button type="button" class="btn btn-accent btn-sm" onclick="addQuestion('essay')">📝 Essay</button>
+              </div>
+            </div>
+
+            <div id="questionsList"></div>
+            <div id="noQuestions" style="text-align:center;padding:32px;color:#aaa;background:#fafafa;border-radius:8px;border:1px dashed #ddd;margin-bottom:24px;">Belum ada soal ditambahkan.</div>
+          </div>
+
+          <div style="text-align:right;">
+            <button type="submit" class="btn btn-primary btn-lg" style="padding:12px 32px;font-size:0.95rem;">💾 Simpan Ujian</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Panel: Live Monitor Proctoring -->
+      <div class="lec-panel" id="panelMonitor" style="background:#f4f6f8; border:1px solid #e1e4e8;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div>
+            <h3 id="monitorTitle" style="margin-bottom:4px;display:flex;align-items:center;gap:8px;font-size:1.3rem;">
+              <span class="live-indicator"></span> Live Proctoring
+            </h3>
+            <p style="color:#666;font-size:0.9rem;margin:0;" id="monitorSubtitle">Memantau Mahasiswa</p>
+          </div>
+          <button type="button" class="btn btn-outline" style="border-color:#1B3A6B;color:#1B3A6B;background:#fff;" onclick="switchLecTab('exams')">Tutup Monitor</button>
+        </div>
+        
+        <div style="margin-bottom:24px;display:flex;gap:12px;background:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05);align-items:center;">
+            <div class="badge badge-success" style="font-size:0.8rem;padding:6px 12px;">Sistem Stabil 🟢</div>
+            <div class="badge badge-info" style="font-size:0.8rem;padding:6px 12px;">AI Face Tracking: Aktif 👁️</div>
+            <div style="font-size:0.8rem;color:#888;margin-left:auto;">Model Data: face-api.js</div>
+        </div>
+
+        <div id="monitorGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:20px;">
+           <!-- generated by JS -->
+        </div>
+      </div>
+
+      <!-- Panel: Data Mahasiswa -->
+      <div class="lec-panel" id="panelStudents">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3 style="margin-bottom:0;">Data Mahasiswa Terdaftar</h3>
+          <span class="badge badge-info" id="studentCount" style="font-size:0.82rem;">0 mahasiswa</span>
+        </div>
+        <div id="studentList"></div>
+      </div>
+
+      <!-- Panel: Laporan Presensi -->
+      <div class="lec-panel" id="panelAttendance">
+        <h3>Laporan Presensi Mahasiswa</h3>
+        <div id="attendanceList"></div>
+      </div>
+
+      <!-- Panel: Hasil Ujian -->
+      <div class="lec-panel" id="panelResults">
+        <h3>Hasil Ujian Mahasiswa</h3>
+        <div id="resultsTable"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© 2026 UNNES LMS — Universitas Negeri Semarang</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    let user;
+    let editQuestions = [];
+    let editQCounter = 0;
+
+    let monitorInterval;
+
+    function resetForm() {
+      document.getElementById('examForm').reset();
+      document.getElementById('editExamId').value = '';
+      document.getElementById('formTitle').textContent = 'Buat Ujian Baru';
+      
+      document.getElementById('questionSection').style.display = 'block';
+      document.getElementById('examStatusGroup').style.display = 'none';
+
+      editQuestions = [];
+      editQCounter = 0;
+      renderQuestions();
+      updateToggle();
+    }
+
+    function switchLecTab(name) {
+      if (name === 'create') {
+        const id = document.getElementById('editExamId').value;
+        if (!id) resetForm();
+      }
+      if (name !== 'monitor' && monitorInterval) {
+        clearInterval(monitorInterval);
+      }
+      
+      // Update active cards
+      const tabMap = { exams: 'cardExams', create: 'cardCreate', students: 'cardStudents', attendance: 'cardAttendance', results: 'cardResults', monitor: 'cardMonitor' };
+      document.querySelectorAll('.lec-stat-card').forEach(c => c.classList.remove('active'));
+      if (tabMap[name]) {
+        const activeCard = document.getElementById(tabMap[name]);
+        if(activeCard) activeCard.classList.add('active');
+      }
+
+      // Update panels
+      document.querySelectorAll('.lec-panel').forEach(p => p.classList.remove('active'));
+      const panelMap = { exams: 'panelExams', create: 'panelCreate', students: 'panelStudents', attendance: 'panelAttendance', results: 'panelResults', monitor: 'panelMonitor' };
+      if (panelMap[name]) {
+        const activePanel = document.getElementById(panelMap[name]);
+        activePanel.classList.add('active');
+        if (name === 'create') renderQuestions();
+        
+        // Scroll down to the panel so user actually sees the change
+        activePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    (async () => {
+      user = App.requireAuth('lecturer');
+      if (!user) return;
+      
+      // Wait for any IndexedDB seeding or migrations to finish
+      if (App.initPromise) await App.initPromise;
+
+      const hour = new Date().getHours();
+      let greet = 'Selamat Pagi';
+      if (hour >= 12 && hour < 15) greet = 'Selamat Siang';
+      else if (hour >= 15 && hour < 18) greet = 'Selamat Sore';
+      else if (hour >= 18) greet = 'Selamat Malam';
+
+      document.getElementById('lecGreeting').textContent = greet;
+      document.getElementById('navName').textContent = 'Panel Admin Dosen';
+      document.getElementById('headerFak').textContent = 'Fakultas Ilmu Pendidikan dan Psikologi';
+
+      // Load data
+      const allExams = await App.getExams();
+      const exams = allExams.filter(e => e.lecturerId === user.nim);
+      const allResults = await App.getResults();
+      const myResults = allResults.filter(r => exams.find(e => e.id === r.examId));
+      const students = await App.getStudents();
+
+      const now = new Date();
+      let activeCount = 0, upcomingCount = 0;
+      exams.forEach(e => {
+        const start = new Date(e.date);
+        const end = new Date(e.endDate);
+        if (now >= start && now <= end) activeCount++;
+        else if (now < start) upcomingCount++;
+      });
+
+      // Stats
+      if(document.getElementById('statTotal')) document.getElementById('statTotal').textContent = exams.length;
+      if(document.getElementById('statActive')) document.getElementById('statActive').textContent = activeCount;
+      if(document.getElementById('statUpcoming')) document.getElementById('statUpcoming').textContent = upcomingCount;
+      if(document.getElementById('statStudents')) document.getElementById('statStudents').textContent = students.length;
+      if(document.getElementById('statResults')) document.getElementById('statResults').textContent = myResults.length;
+
+      // Render: Exam Table
+      renderExams(exams, myResults);
+      // Render: Students
+      renderStudents(students);
+      // Render: Results
+      renderResults(myResults, exams);
+      // Render: Attendance
+      renderAttendance(myResults, exams);
+    })();
+
+    function renderExams(exams, myResults) {
+      const el = document.getElementById('myExams');
+      if (exams.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;">Belum ada ujian. <a href="create-exam.html" style="color:#D4A843;font-weight:600;">Buat ujian pertama</a></div>';
+        return;
+      }
+
+      el.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>Nama Ujian</th><th>Mata Kuliah</th><th>Waktu</th><th>Durasi</th><th>Soal</th><th>Status</th><th>Aksi</th></tr></thead><tbody>' +
+        exams.map(e => {
+          const now = new Date();
+          const start = new Date(e.date);
+          const end = new Date(e.endDate);
+          let status = '', statusClass = '';
+          if (now >= start && now <= end) { status = 'Aktif'; statusClass = 'badge-success'; }
+          else if (now < start) { status = 'Akan Datang'; statusClass = 'badge-warning'; }
+          else { status = 'Selesai'; statusClass = 'badge-info'; }
+
+          return `<tr>
+            <td style="font-weight:700;">${e.title}</td>
+            <td>${e.course}</td>
+            <td style="font-size:0.82rem;">${App.formatDate(e.date)}</td>
+            <td>${App.formatDuration(e.duration)}</td>
+            <td>${e.questions ? e.questions.length : 0} soal</td>
+            <td><span class="badge ${statusClass}">${status}</span></td>
+            <td style="min-width: 140px; vertical-align: top;">
+              ${status === 'Selesai'
+                ? `<button class="btn btn-outline btn-sm" onclick="showProctoringReport('${e.id}')" style="padding:4px 10px;border-color:#3B82F6;color:#3B82F6;margin-bottom:6px;width:100%;display:flex;justify-content:center;font-weight:700;background:rgba(59,130,246,0.05);transition:background 0.2s;">📋 Laporan Proctoring</button>`
+                : `<button class="btn btn-outline btn-sm" onclick="showMonitor('${e.id}')" style="padding:4px 10px;border-color:#10B981;color:#10B981;margin-bottom:6px;width:100%;display:flex;justify-content:center;font-weight:700;background:rgba(16,185,129,0.05);transition:background 0.2s;">👁️ Pantau Live</button>`
+              }
+              <div style="display:flex;gap:4px;">
+                <button class="btn-edit" style="flex:1;justify-content:center;" onclick="editExam('${e.id}')">✏️ Edit</button>
+                <button class="btn-hapus" style="flex:1;justify-content:center;" onclick="deleteExam('${e.id}')">🗑️ Hapus</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('') +
+        '</tbody></table></div>';
+    }
+
+    // We attach students globally so we can access them for photo modals
+    window._currentDashboardStudents = [];
+
+    function renderStudents(students) {
+      window._currentDashboardStudents = students;
+      const el = document.getElementById('studentList');
+      document.getElementById('studentCount').textContent = `${students.length} mahasiswa`;
+
+      if (students.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;">Belum ada mahasiswa terdaftar.</div>';
+        return;
+      }
+
+      el.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>No</th><th>NIM</th><th>Nama</th><th>Program Studi</th><th>Email</th><th>WhatsApp</th><th>Tgl Daftar</th><th>Foto Registrasi</th></tr></thead><tbody>' +
+        students.map((s, i) => `<tr>
+          <td>${i + 1}</td>
+          <td style="font-weight:600;">${s.nim}</td>
+          <td>${s.name}</td>
+          <td>${s.prodi || '-'}</td>
+          <td style="font-size:0.82rem;">${s.email || '-'}</td>
+          <td>${s.phone || '-'}</td>
+          <td>${s.registeredAt ? App.formatDate(s.registeredAt) : '-'}</td>
+          <td>
+            ${s.photoReg 
+              ? `<button class="btn btn-outline btn-sm" onclick="showStudentPhoto('${s.nim}')" style="padding:4px 8px;font-size:0.75rem;">🖼️ Lihat Foto</button>` 
+              : `<span style="color:#aaa;font-size:0.75rem;">Tidak ada foto</span>`
+            }
+          </td>
+        </tr>`).join('') +
+        '</tbody></table></div>';
+    }
+
+    function renderResults(results, exams) {
+      const el = document.getElementById('resultsTable');
+      if (results.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;">Belum ada hasil ujian.</div>';
+        return;
+      }
+
+      // We attach the results object to the window so the toggle function has access to it natively without refetching
+      window._currentDashboardResults = results;
+      window._currentDashboardExams = exams;
+
+      el.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>Mahasiswa</th><th>Ujian</th><th>Skor</th><th>Pelanggaran</th><th>Waktu Submit</th><th>Aksi</th></tr></thead><tbody>' +
+        results.map(r => {
+          const exam = exams.find(e => e.id === r.examId);
+          const vCount = r.violations ? r.violations.length : 0;
+          
+          // Generate the detailed breakdown HTML
+          let detailHtml = `<div style="padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin:8px 0;">
+            <h4 style="margin-top:0;margin-bottom:12px;color:#1B3A6B;display:flex;justify-content:space-between;align-items:center;">
+              Rincian Jawaban
+              <span class="badge ${r.score >= 70 ? 'badge-success' : 'badge-danger'}">Total Nilai: ${r.score}</span>
+            </h4>
+            <div style="display:grid;gap:12px;">`;
+
+          if (exam && exam.questions) {
+            exam.questions.forEach((q, idx) => {
+              const studentAnswer = r.answers ? r.answers[q.id] : null;
+              let isCorrect = false;
+              let ansDisplay = studentAnswer;
+
+              if (q.type === 'multiple') {
+                isCorrect = parseInt(studentAnswer) === parseInt(q.answer);
+                ansDisplay = studentAnswer !== null && studentAnswer !== undefined ? q.options[parseInt(studentAnswer)] : 'Tidak dijawab';
+                const correctAnsText = q.options[parseInt(q.answer)];
+                detailHtml += `
+                  <div style="padding:12px;background:#fff;border-radius:6px;border-left:4px solid ${isCorrect ? '#10B981' : '#EF4444'};box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="font-weight:600;font-size:0.9rem;margin-bottom:6px;">${idx + 1}. ${q.text}</div>
+                    <div style="font-size:0.85rem;color:#555;margin-bottom:4px;">Jawaban Mahasiswa: <strong style="color:${isCorrect ? '#10B981' : '#EF4444'}">${ansDisplay}</strong></div>
+                    ${!isCorrect ? `<div style="font-size:0.8rem;color:#10B981;">Kunci Jawaban: ${correctAnsText}</div>` : ''}
+                  </div>`;
+              } else {
+                detailHtml += `
+                  <div style="padding:12px;background:#fff;border-radius:6px;border-left:4px solid #3B82F6;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="font-weight:600;font-size:0.9rem;margin-bottom:6px;">${idx + 1}. ${q.text} <span class="badge badge-info" style="font-size:0.65rem;">Essay</span></div>
+                    <div style="font-size:0.85rem;color:#555;">Jawaban Mahasiswa:<br> <div style="padding:8px;background:#f3f4f6;border-radius:4px;margin-top:4px;">${ansDisplay || 'Tidak dijawab'}</div></div>
+                  </div>`;
+              }
+            });
+          } else {
+            detailHtml += `<div style="color:#aaa;font-size:0.85rem;">Detail soal tidak ditemukan.</div>`;
+          }
+
+          detailHtml += `</div>`;
+          
+          // Violations log
+          if (vCount > 0) {
+            detailHtml += `<h4 style="margin-top:20px;margin-bottom:12px;color:#EF4444;">Daftar Pelanggaran (Proctoring Ai)</h4><ul style="padding-left:20px;margin:0;font-size:0.85rem;color:#555;">`;
+            r.violations.forEach(v => {
+               detailHtml += `<li style="margin-bottom:4px;"><strong>${App.formatTime(v.time)}</strong>: ${v.desc}</li>`;
+            });
+            detailHtml += `</ul>`;
+          } else {
+             detailHtml += `<div style="margin-top:16px;font-size:0.85rem;color:#10B981;">✅ Tidak ada pelanggaran tercatat selama ujian.</div>`;
+          }
+
+          // Expressions log
+          if (r.expressions && Object.keys(r.expressions).length > 0) {
+            detailHtml += `<h4 style="margin-top:20px;margin-bottom:12px;color:#1B3A6B;">📊 Analisis Reaksi Wajah Sepanjang Ujian</h4><div style="display:flex;flex-direction:column;gap:8px;max-width:400px;">`;
+            Object.entries(r.expressions).sort((a, b) => b[1] - a[1]).forEach(([expr, pct]) => {
+              if (pct < 1) return;
+              const emojis = { happy: '😊', sad: '😢', angry: '😠', surprised: '😲', fearful: '😨', disgusted: '🤢', neutral: '😐' };
+              const labels = { happy: 'Senang', sad: 'Sedih', angry: 'Marah', surprised: 'Terkejut', fearful: 'Takut', disgusted: 'Jijik', neutral: 'Netral' };
+              const colors = { happy: '#10B981', sad: '#3B82F6', angry: '#EF4444', surprised: '#F59E0B', fearful: '#8B5CF6', disgusted: '#EC4899', neutral: '#6B7280' };
+              
+              detailHtml += `
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;color:#555;">
+                    <span>${emojis[expr] || ''} ${labels[expr] || expr}</span>
+                    <span style="font-family:monospace;font-weight:600;">${pct}%</span>
+                  </div>
+                  <div style="width:100%;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${colors[expr] || '#9ca3af'};border-radius:4px;"></div>
+                  </div>
+                </div>
+              `;
+            });
+            detailHtml += `</div>`;
+          }
+          
+          detailHtml += `</div>`;
+
+          return `<tr>
+            <td style="font-weight:600;">${r.studentName}</td>
+            <td>${exam ? exam.title : r.examId}</td>
+            <td><span class="badge ${r.score >= 70 ? 'badge-success' : r.score >= 50 ? 'badge-warning' : 'badge-danger'}">${r.score}</span></td>
+            <td>${vCount > 0 ? `<span class="badge badge-danger">⚠ ${vCount}</span>` : '<span class="badge badge-success">✓ 0</span>'}</td>
+            <td style="font-size:0.82rem;">${App.formatDate(r.submittedAt)} ${App.formatTime(r.submittedAt)}</td>
+            <td><button onclick="toggleResultDetail('${r.id}')" class="btn btn-outline btn-sm" id="btn_detail_${r.id}">Lihat Detail 🔽</button></td>
+          </tr>
+          <tr id="row_detail_${r.id}" style="display:none;background:#fafafa;">
+            <td colspan="6" style="padding:0;border:none;">
+              <div style="padding:16px 24px;border-bottom:1px solid #eee;">${detailHtml}</div>
+            </td>
+          </tr>`;
+        }).join('') +
+        '</tbody></table></div>';
+    }
+
+    function toggleResultDetail(resultId) {
+       const row = document.getElementById('row_detail_' + resultId);
+       const btn = document.getElementById('btn_detail_' + resultId);
+       if(row.style.display === 'none' || row.style.display === '') {
+         row.style.display = 'table-row';
+         btn.innerHTML = 'Tutup Detail 🔼';
+         btn.style.background = '#f3f4f6';
+       } else {
+         row.style.display = 'none';
+         btn.innerHTML = 'Lihat Detail 🔽';
+         btn.style.background = 'transparent';
+       }
+    }
+
+    function renderAttendance(results, exams) {
+      const el = document.getElementById('attendanceList');
+      if (results.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;">Belum ada data presensi.</div>';
+        return;
+      }
+
+      el.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>No</th><th>Mahasiswa</th><th>Ujian</th><th>Waktu Submit</th><th>Keterlambatan</th><th>Foto (Registrasi vs Presensi)</th><th>Status Verifikasi</th><th>Aksi</th></tr></thead><tbody>' +
+        results.map((r, i) => {
+          const exam = exams.find(e => e.id === r.examId);
+          const student = window._currentDashboardStudents.find(s => s.nim === r.studentId);
+          
+          const submitTime = new Date(r.submittedAt);
+          const isLate = exam ? submitTime > new Date(exam.endDate) : false;
+          let delayStr = '';
+          if (isLate) {
+            const delayMins = Math.floor((submitTime.getTime() - new Date(exam.endDate).getTime()) / 60000);
+            delayStr = `${delayMins} menit ❌`;
+          }
+
+          const photoReg = student && student.photoReg ? student.photoReg : '';
+          const photoPres = r.photoPresensi || '';
+          
+          let vStatusHTML = '';
+          if (r.verificationStatus === 'approved') {
+            vStatusHTML = '<span style="color:#10B981;font-weight:700;display:flex;align-items:center;gap:4px;">✅ Cocok</span>';
+          } else if (r.verificationStatus === 'rejected') {
+            vStatusHTML = '<span style="color:#EF4444;font-weight:700;display:flex;align-items:center;gap:4px;">❌ Tidak Cocok</span>';
+          } else {
+             vStatusHTML = '<span style="color:#F59E0B;font-weight:700;display:flex;align-items:center;gap:4px;">⏳ Menunggu</span>';
+          }
+
+          return `<tr>
+            <td>${i + 1}</td>
+            <td style="font-weight:600;">${r.studentName} <br><span style="font-size:0.75rem;color:#888;font-weight:400;">${r.studentId}</span></td>
+            <td>${exam ? exam.title : r.examId}</td>
+            <td style="font-size:0.82rem;">${App.formatDate(r.submittedAt)}<br/>${App.formatTime(r.submittedAt)}</td>
+            <td>${isLate ? `<span class="badge badge-danger">Sangat Terlambat<br/>${delayStr}</span>` : '<span class="badge badge-success">Tepat Waktu</span>'}</td>
+            
+            <td style="text-align:center;">
+               <div style="display:flex;gap:8px;justify-content:center;">
+                  <div style="text-align:center;">
+                     <div style="font-size:0.6rem;color:#666;margin-bottom:2px;">Registrasi</div>
+                     ${photoReg ? `<img src="${photoReg}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;border:2px solid #3B82F6;" onclick="showStudentPhoto('${r.studentId}')" style="cursor:pointer;" title="Lihat Foto Registrasi">` : `<div style="width:50px;height:50px;background:#eee;border-radius:4px;font-size:0.6rem;display:flex;align-items:center;justify-content:center;">No Photo</div>`}
+                  </div>
+                  <div style="text-align:center;">
+                     <div style="font-size:0.6rem;color:#666;margin-bottom:2px;">Presensi</div>
+                     ${photoPres ? `<img src="${photoPres}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;border:2px solid #10B981;" onclick="showPresensiPhoto('${r.id}')" style="cursor:pointer;" title="Lihat Foto Presensi">` : `<div style="width:50px;height:50px;background:#eee;border-radius:4px;font-size:0.6rem;display:flex;align-items:center;justify-content:center;">No Photo</div>`}
+                  </div>
+               </div>
+            </td>
+            
+            <td>${vStatusHTML}</td>
+            
+            <td style="min-width:100px;">
+              <div style="display:flex;gap:4px;justify-content:center;">
+                 <button class="btn btn-sm" style="background:#10B981;color:#fff;padding:4px 8px;" onclick="verifyFace('${r.id}', 'approved')" title="Cocok">✓</button>
+                 <button class="btn btn-sm" style="background:#EF4444;color:#fff;padding:4px 8px;" onclick="verifyFace('${r.id}', 'rejected')" title="Tidak Cocok">✕</button>
+                 <button class="btn btn-sm" style="background:#3B82F6;color:#fff;padding:4px 8px;" onclick="compareFaces('${r.id}')" title="Detail Perbandingan">🔍</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('') +
+        '</tbody></table></div>';
+    }
+
+    async function verifyFace(resultId, status) {
+       const results = await App.getResults();
+       const result = results.find(r => r.id === resultId);
+       if(!result) return;
+       
+       result.verificationStatus = status;
+       await App.updateResult(result);
+       App.toast(status === 'approved' ? 'Wajah diverifikasi cocok.' : 'Wajah ditandai tidak cocok!', status === 'approved' ? 'success' : 'danger');
+       
+       // Update global state and re-render the attendance list dynamically
+       if (window._currentDashboardResults) {
+          const rGlob = window._currentDashboardResults.find(r => r.id === resultId);
+          if (rGlob) rGlob.verificationStatus = status;
+       }
+       renderAttendance(window._currentDashboardResults || await App.getResults(), window._currentDashboardExams || await App.getExams());
+    }
+
+    async function deleteExam(examId) {
+      if (!confirm('Yakin ingin menghapus ujian ini?')) return;
+      await App.deleteExam(examId);
+      window.location.reload();
+    }
+
+    // --- Student Photo / Comparsion Modal Logic ---
+    function showStudentPhoto(nim) {
+       const s = window._currentDashboardStudents.find(x => x.nim === nim);
+       if(!s || !s.photoReg) return;
+       const modal = document.getElementById('photoModal');
+       document.getElementById('photoModalImg').src = s.photoReg;
+       document.getElementById('photoModalName').textContent = s.name + ' - ' + s.nim;
+       modal.style.display = 'flex';
+    }
+    
+    async function showPresensiPhoto(resultId) {
+       const results = await App.getResults();
+       const r = results.find(x => x.id === resultId);
+       if(!r || !r.photoPresensi) return;
+       const modal = document.getElementById('photoModal');
+       document.getElementById('photoModalImg').src = r.photoPresensi;
+       document.getElementById('photoModalName').textContent = 'Presensi: ' + r.studentName;
+       modal.style.display = 'flex';
+    }
+    
+    function closePhotoModal() {
+       document.getElementById('photoModal').style.display = 'none';
+       document.getElementById('photoModalImg').src = '';
+    }
+
+    async function showPresensiPhoto(resultId) {
+       const results = await App.getResults();
+       const r = results.find(x => x.id === resultId);
+       if(!r || !r.photoPresensi) return;
+       const modal = document.getElementById('photoModal');
+       document.getElementById('photoModalImg').src = r.photoPresensi;
+       document.getElementById('photoModalName').textContent = 'Presensi: ' + r.studentName;
+       modal.style.display = 'flex';
+    }
+
+    async function compareFaces(resultId) {
+       const results = await App.getResults();
+       const r = results.find(x => x.id === resultId);
+       if(!r) return;
+       const s = window._currentDashboardStudents.find(x => x.nim === r.studentId);
+       
+       const modal = document.getElementById('compareModal');
+       document.getElementById('compareModalName').textContent = 'Verifikasi Wajah - ' + r.studentName;
+       document.getElementById('compareImgReg').src = (s && s.photoReg) ? s.photoReg : '';
+       document.getElementById('compareImgPres').src = r.photoPresensi ? r.photoPresensi : '';
+       document.getElementById('compareResultId').value = r.id;
+       modal.style.display = 'flex';
+    }
+    
+    function closeCompareModal() {
+       document.getElementById('compareModal').style.display = 'none';
+    }
+    
+    function setVerification(status) {
+       const rId = document.getElementById('compareResultId').value;
+       verifyFace(rId, status);
+       closeCompareModal();
+    }
+
+    async function compareFaces(resultId) {
+       const results = await App.getResults();
+       const r = results.find(x => x.id === resultId);
+       if(!r) return;
+       const s = window._currentDashboardStudents.find(x => x.nim === r.studentId);
+       
+       const modal = document.getElementById('compareModal');
+       document.getElementById('compareModalName').textContent = 'Verifikasi Wajah - ' + r.studentName;
+       document.getElementById('compareImgReg').src = (s && s.photoReg) ? s.photoReg : '';
+       document.getElementById('compareImgPres').src = r.photoPresensi ? r.photoPresensi : '';
+       document.getElementById('compareResultId').value = r.id;
+       modal.style.display = 'flex';
+    }
+    
+    function closeCompareModal() {
+       document.getElementById('compareModal').style.display = 'none';
+    }
+    
+    function setVerification(status) {
+       const rId = document.getElementById('compareResultId').value;
+       verifyFace(rId, status);
+       closeCompareModal();
+    }
+
+    // --- Proctoring Report Logic ---
+    async function showProctoringReport(examId) {
+       const exam = await App.getExamById(examId);
+       if(!exam) return;
+       const results = await App.getResults();
+       const examResults = results.filter(r => r.examId === examId);
+       
+       const modal = document.getElementById('proctoringModal');
+       const content = document.getElementById('proctoringModalContent');
+       
+       let html = `<h3 style="margin-top:0;color:#1B3A6B;border-bottom:1px solid #eee;padding-bottom:12px;margin-bottom:16px;">
+          Laporan Proctoring AI: <span style="font-weight:400;">${exam.title}</span>
+       </h3>`;
+
+       if(!exam.proctoring) {
+         html += `<div style="padding:24px;text-align:center;color:#888;">Fitur Proctoring AI <strong>tidak diaktifkan</strong> pada ujian ini.</div>`;
+       } else if (examResults.length === 0) {
+         html += `<div style="padding:24px;text-align:center;color:#888;">Belum ada riwayat pengerjaan mahasiswa untuk ujian ini.</div>`;
+       } else {
+         html += `<div style="max-height:60vh;overflow-y:auto;padding-right:8px;">`;
+         let totalCheaters = 0;
+         
+         examResults.forEach(r => {
+            const vCount = r.violations ? r.violations.length : 0;
+            if(vCount > 0) totalCheaters++;
+            
+            html += `<div style="margin-bottom:16px;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+               <div style="background:${vCount > 0 ? '#FEF2F2' : '#F0FDF4'};padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ${vCount > 0 ? '#FEE2E2' : '#DCFCE7'};">
+                  <div style="font-weight:600;">${r.studentName} <span style="font-size:0.8rem;color:#666;font-weight:400;">(${r.studentId})</span></div>
+                  <div>
+                    ${vCount > 0 
+                      ? `<span class="badge badge-danger">⚠ ${vCount} Indikasi Kecurangan</span>` 
+                      : `<span class="badge badge-success">✅ Bersih</span>`
+                    }
+                  </div>
+               </div>
+               ${vCount > 0 ? `
+                 <ul style="margin:0;padding:12px 16px 12px 32px;background:#fff;font-size:0.85rem;color:#555;line-height:1.6;">
+                   ${r.violations.map(v => `<li><strong>${App.formatTime(v.time)}</strong>: ${v.desc}</li>`).join('')}
+                 </ul>
+               ` : ''}
+            </div>`;
+         });
+         
+         html += `</div>`;
+         html += `<div style="margin-top:16px;padding-top:16px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+             <span style="font-size:0.85rem;color:#666;">Total Peserta Mengerjakan: <strong>${examResults.length}</strong></span>
+             <span style="font-size:0.85rem;color:#EF4444;">Terindikasi Curang: <strong>${totalCheaters}</strong></span>
+         </div>`;
+       }
+       
+       content.innerHTML = html;
+       modal.style.display = 'flex';
+    }
+
+    function closeProctoringModal() {
+       document.getElementById('proctoringModal').style.display = 'none';
+    }
+
+    // --- Create / Edit Form Logic ---
+    const proctorCheck = document.getElementById('proctoring');
+    const toggleBg = document.getElementById('toggleBg');
+    const toggleDot = document.getElementById('toggleDot');
+
+    function updateToggle() {
+      if (proctorCheck.checked) {
+        toggleBg.style.background = '#10B981';
+        toggleDot.style.left = '27px';
+      } else {
+        toggleBg.style.background = '#e0e0e0';
+        toggleDot.style.left = '3px';
+      }
+    }
+    proctorCheck.addEventListener('change', updateToggle);
+    updateToggle();
+
+    function syncEditQuestions() {
+      // Sync current DOM values to array before re-rendering
+      editQuestions.forEach((q, idx) => {
+        const textEl = document.getElementById(`eq_${idx}_text`);
+        if (textEl) q.text = textEl.value;
+
+        const pointsEl = document.getElementById(`eq_${idx}_points`);
+        if (pointsEl) q.points = parseInt(pointsEl.value) || 10;
+
+        if (q.type === 'multiple') {
+          q.options.forEach((opt, oi) => {
+            const optEl = document.getElementById(`eq_${idx}_opt_${oi}`);
+            if (optEl) q.options[oi] = optEl.value;
+            
+            const radioEl = document.getElementById(`eq_${idx}_radio_${oi}`);
+            if (radioEl && radioEl.checked) q.answer = oi;
+          });
+        }
+      });
+    }
+
+    function addQuestion(type) {
+      syncEditQuestions(); // Save current state
+      editQCounter++;
+      const q = {
+        id: 'q' + editQCounter,
+        type: type,
+        text: '',
+        options: type === 'multiple' ? ['', '', '', ''] : [],
+        answer: type === 'multiple' ? 0 : '',
+        points: 10
+      };
+      editQuestions.push(q);
+      renderQuestions();
+    }
+
+    function removeQuestion(idx) {
+      syncEditQuestions(); // Save prior state before removing
+      editQuestions.splice(idx, 1);
+      renderQuestions();
+    }
+
+    function renderQuestions() {
+      const el = document.getElementById('questionsList');
+      const noQ = document.getElementById('noQuestions');
+      if (!el || !noQ) return;
+
+      if (editQuestions.length === 0) {
+        el.innerHTML = '';
+        noQ.style.display = 'block';
+        return;
+      }
+
+      noQ.style.display = 'none';
+      let html = editQuestions.map((q, idx) => {
+        const isMultiple = q.type === 'multiple';
+        return `
+          <div style="background:#fff;border:1px solid #eee;border-radius:12px;padding:20px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="badge ${isMultiple ? 'badge-info' : 'badge-accent'}">${isMultiple ? 'Pilihan Ganda' : 'Essay'}</span>
+                <span style="font-weight:700;font-size:0.95rem;color:#1B3A6B;">Soal ${idx + 1}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="number" id="eq_${idx}_points" value="${q.points}" min="1" max="100" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:6px;text-align:center;" onchange="editQuestions[${idx}].points=parseInt(this.value)">
+                <span style="font-size:0.8rem;color:#888;">poin</span>
+                <button type="button" class="btn btn-hapus" style="padding:6px 10px;" onclick="removeQuestion(${idx})">✕</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:${isMultiple ? '14px' : '0'};">
+              <textarea id="eq_${idx}_text" class="form-input" placeholder="Tulis pertanyaan di sini..." style="min-height:70px;background:#f9f9f9;resize:vertical;" onchange="editQuestions[${idx}].text=this.value">${q.text}</textarea>
+            </div>
+
+            ${isMultiple ? `
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                ${q.options.map((opt, oi) => `
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="radio" id="eq_${idx}_radio_${oi}" name="answer_${idx}" ${q.answer === oi ? 'checked' : ''} onchange="editQuestions[${idx}].answer=${oi}" style="accent-color:#1B3A6B;transform:scale(1.2);">
+                    <input type="text" id="eq_${idx}_opt_${oi}" class="form-input" placeholder="Opsi ${String.fromCharCode(65 + oi)}" value="${opt}" onchange="editQuestions[${idx}].options[${oi}]=this.value" style="margin-bottom:0;">
+                  </div>
+                `).join('')}
+              </div>
+              <p style="font-size:0.75rem;color:#888;margin-top:8px;">Pilih radio button untuk menandai jawaban benar</p>
+            ` : `
+              <p style="font-size:0.8rem;color:#888;margin-top:4px;">Jawaban essay akan dinilai manual oleh dosen</p>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      // Add a prominent "+ Tambah Soal" section at the bottom
+      html += `
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:24px;margin-bottom:32px;padding:24px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:12px;">
+          <button type="button" class="btn btn-primary" onclick="addQuestion('multiple')" style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.2rem;">➕</span> Pilihan Ganda Baru</button>
+          <button type="button" class="btn btn-accent" onclick="addQuestion('essay')" style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.2rem;">📝</span> Essay Baru</button>
+        </div>
+      `;
+      el.innerHTML = html;
+    }
+
+    async function handleSaveExam(e) {
+      e.preventDefault();
+      
+      const title = document.getElementById('examTitle').value.trim();
+      const course = document.getElementById('examCourse').value.trim();
+      const duration = parseInt(document.getElementById('examDuration').value);
+      const date = document.getElementById('examDate').value;
+      const endDate = document.getElementById('examEndDate').value;
+      const proctoring = document.getElementById('proctoring').checked;
+      const editId = document.getElementById('editExamId').value;
+
+      if (!title || !course || !duration || !date || !endDate) {
+        App.toast('Mohon lengkapi semua informasi ujian', 'warning');
+        return;
+      }
+
+      // If we are editing, we ignore the question builder and update status instead
+      if (editId) {
+        const existing = await App.getExamById(editId);
+        if(!existing) return;
+        
+        existing.title = title;
+        existing.course = course;
+        existing.duration = duration;
+        existing.proctoring = proctoring;
+        
+        // Convert logic dates depending on selected status override from the dropdown
+        const selectedStatus = document.getElementById('examStatus').value;
+        const now = new Date();
+        
+        // Helper to format local date without UTC shift
+        const toLocalISO = (d) => {
+          const pad = n => n < 10 ? '0'+n : n;
+          return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+        };
+
+        if(selectedStatus === 'upcoming') {
+           // Push start to future
+           const fut = new Date(now.getTime() + 86400000); // +1 day
+           existing.date = toLocalISO(new Date(Math.max(new Date(date).getTime(), fut.getTime())));
+           existing.endDate = toLocalISO(new Date(new Date(existing.date).getTime() + (duration*60000)));
+        } else if (selectedStatus === 'active') {
+           // Ensure it's active right now
+           existing.date = toLocalISO(new Date(now.getTime() - 60000)); // Started 1 min ago
+           existing.endDate = toLocalISO(new Date(now.getTime() + (duration*60000)));
+        } else if (selectedStatus === 'completed') {
+           // Make it past
+           existing.date = toLocalISO(new Date(now.getTime() - 86400000)); // 1 day ago
+           existing.endDate = toLocalISO(new Date(now.getTime() - 80000000));
+        } else {
+           existing.date = date;
+           existing.endDate = endDate;
+        }
+        
+        await App.updateExam(existing);
+        App.toast('Perubahan status & info ujian berhasil disimpan!', 'success');
+        setTimeout(() => { window.location.reload(); }, 1500);
+        return;
+      }
+
+      // If we are creating a new exam, validate questions exactly as before
+      if (editQuestions.length === 0) {
+        App.toast('Tambahkan minimal 1 soal', 'warning');
+        return;
+      }
+      
+      // Validate questions
+      for (let i = 0; i < editQuestions.length; i++) {
+        if (!editQuestions[i].text.trim()) {
+          App.toast(`Soal ${i + 1} belum diisi`, 'warning'); return;
+        }
+        if (editQuestions[i].type === 'multiple') {
+          const emptyOpts = editQuestions[i].options.filter(o => !o.trim());
+          if (emptyOpts.length > 0) { App.toast(`Lengkapi semua opsi soal ${i + 1}`, 'warning'); return; }
+        }
+      }
+
+      const examData = {
+        title, course, duration, date, endDate, proctoring,
+        lecturer: user.name, lecturerId: user.nim, status: 'upcoming',
+        questions: editQuestions.map(q => ({...q}))
+      };
+
+      await App.addExam(examData);
+      App.toast('Ujian baru berhasil dibuat!', 'success');
+      setTimeout(() => { window.location.reload(); }, 1500);
+    }
+
+    async function editExam(id) {
+      const exam = await App.getExamById(id);
+      if (!exam) return;
+
+      document.getElementById('editExamId').value = exam.id;
+      document.getElementById('formTitle').textContent = '✏️ Ubah Status & Info: ' + exam.title;
+      
+      document.getElementById('examTitle').value = exam.title;
+      document.getElementById('examCourse').value = exam.course;
+      document.getElementById('examDuration').value = exam.duration;
+      document.getElementById('examDate').value = exam.date;
+      document.getElementById('examEndDate').value = exam.endDate || exam.date; // fallback if no endDate
+      
+      document.getElementById('proctoring').checked = exam.proctoring;
+      updateToggle();
+
+      // Determine current status to select native dropdown logic
+      const now = new Date();
+      const st = new Date(exam.date);
+      const en = new Date(exam.endDate);
+      let stat = 'upcoming';
+      if(now >= st && now <= en) stat = 'active';
+      else if(now > en) stat = 'completed';
+      
+      document.getElementById('examStatus').value = stat;
+
+      // Hide questions and show status dropdown
+      document.getElementById('questionSection').style.display = 'none';
+      document.getElementById('examStatusGroup').style.display = 'block';
+      
+      switchLecTab('create');
+    }
+
+    // --- Live Monitor Logic ---
+    async function showGlobalMonitor() {
+      await showMonitor(null);
+    }
+
+    async function showMonitor(examId) {
+      if (examId) {
+        const exam = await App.getExamById(examId);
+        if(exam) document.getElementById('monitorTitle').innerHTML = `<span class="live-indicator"></span> Live Proctoring: ${exam.title}`;
+      } else {
+        document.getElementById('monitorTitle').innerHTML = `<span class="live-indicator"></span> Live Proctoring: Pantauan Seluruh Layar`;
+      }
+
+      switchLecTab('monitor');
+
+      if(monitorInterval) clearInterval(monitorInterval);
+
+      // Helper to read live frames from IndexedDB
+      function getLiveProctorFrames() {
+        return new Promise((resolve) => {
+          try {
+            const req = indexedDB.open('unnes_lms');
+            req.onsuccess = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains('liveProctoring')) {
+                db.close();
+                resolve([]);
+                return;
+              }
+              const tx = db.transaction('liveProctoring', 'readonly');
+              const store = tx.objectStore('liveProctoring');
+              const all = store.getAll();
+              all.onsuccess = () => { db.close(); resolve(all.result || []); };
+              all.onerror = () => { db.close(); resolve([]); };
+            };
+            req.onerror = () => resolve([]);
+          } catch(e) { resolve([]); }
+        });
+      }
+
+      // Get all registered students for display
+      const allStudents = await App.getStudents();
+      let dStudents = allStudents.slice(0, 12);
+      if(dStudents.length === 0) {
+        dStudents = [
+          {name: 'Menunggu Mahasiswa...', nim: '00000'}
+        ];
+      }
+
+      document.getElementById('monitorSubtitle').textContent = `Memantau ${dStudents.length} Mahasiswa`;
+
+      const grid = document.getElementById('monitorGrid');
+
+      // Build initial grid
+      function renderGrid(liveFrames) {
+        const frameMap = {};
+        liveFrames.forEach(f => { frameMap[f.nim] = f; });
+
+        // Filter: only keep students who are actually live right now
+        const activeStudents = dStudents.filter(s => {
+          const live = frameMap[s.nim];
+          return live && (Date.now() - live.timestamp < 10000); // Active within 10s
+        });
+
+        // Update subtitle with live count
+        document.getElementById('monitorSubtitle').textContent = `Memantau ${activeStudents.length} Mahasiswa Aktif 🟢 (dari total ${dStudents.length} terdaftar)`;
+
+        if (activeStudents.length === 0) {
+          grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; padding: 60px 20px; color: #888; background: #fff; border-radius: 12px; border: 1px dashed #ccc;">
+              <div style="font-size: 3rem; margin-bottom: 16px;">💤</div>
+              <h4 style="margin:0 0 8px; color:#555;">Belum Ada Mahasiswa Tersambung</h4>
+              <p style="margin:0; font-size:0.9rem;">Monitor proctoring akan otomatis menampilkan kamera mahasiswa ketika mereka mulai mengerjakan ujian.</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = activeStudents.map((s, i) => {
+          const live = frameMap[s.nim];
+
+          const statusLabels = {
+            'active': '🟢 Wajah Terdeteksi',
+            'no_face': '🔴 Wajah Hilang!',
+            'multiple_faces': '🔴 2+ Wajah!',
+            'gaze_away': '🟡 Menyimpang!',
+            'idle': '⚪ Menunggu...'
+          };
+
+          const statusColors = {
+            'active': '#10B981',
+            'no_face': '#EF4444',
+            'multiple_faces': '#EF4444',
+            'gaze_away': '#F59E0B',
+            'idle': '#888'
+          };
+
+          let imgSrc = live.frame;
+          let statusText = statusLabels[live.status] || '🟢 Aktif';
+          let statusColor = statusColors[live.status] || '#10B981';
+          let violationBadge = '';
+          let exprBadge = '';
+          let warningClass = '';
+
+          if (live.violations > 0) {
+            const vColor = live.violations >= 3 ? '#EF4444' : live.violations >= 2 ? '#F59E0B' : '#888';
+            violationBadge = `<span style="position:absolute;top:6px;right:6px;background:${vColor};color:#fff;font-size:0.6rem;padding:2px 6px;border-radius:8px;font-weight:700;">⚠ ${live.violations}</span>`;
+          }
+
+          if (live.expression && live.expression.emoji) {
+            exprBadge = `<span style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:0.65rem;padding:2px 6px;border-radius:8px;">${live.expression.emoji} ${live.expression.label || ''}</span>`;
+          }
+
+          if (live.status === 'no_face' || live.status === 'multiple_faces') {
+            warningClass = ' warning';
+          }
+
+          return `
+            <div class="cam-box animate-in delay-${i%3}${warningClass}" id="cam_${s.nim}">
+              <img src="${imgSrc}" class="cam-img" alt="cam">
+              ${violationBadge}
+              ${exprBadge}
+
+              <div class="face-box ${live.status === 'active' ? '' : 'fear'}" id="face_${s.nim}">
+                <div class="face-label" id="label_${s.nim}">${live.expression?.label || 'Aktif'}</div>
+              </div>
+
+              <div class="cam-overlay">
+                <span class="cam-name">${s.name || 'Mahasiswa'} - ${s.nim}</span>
+                <span class="cam-status" id="status_${s.nim}" style="color:${statusColor};">${statusText}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Initial render
+      const initialFrames = await getLiveProctorFrames();
+      renderGrid(initialFrames);
+
+      // Poll for updates every 2 seconds
+      monitorInterval = setInterval(async () => {
+        const frames = await getLiveProctorFrames();
+        renderGrid(frames);
+      }, 2000);
+    }
+    
+    function closeProctoringModal() {
+       document.getElementById('proctoringModal').style.display = 'none';
+    }
+  </script>
+
+  <!-- Laporan Proctoring Modal -->
+  <div id="proctoringModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:12px;width:100%;max-width:600px;box-shadow:0 10px 30px rgba(0,0,0,0.2);animation: slideUp 0.3s ease-out;">
+       <div id="proctoringModalContent" style="padding:24px;"></div>
+       <div style="background:#f9fafb;padding:16px 24px;border-top:1px solid #eee;border-radius:0 0 12px 12px;text-align:right;">
+         <button class="btn btn-outline" style="border-color:#1B3A6B;color:#1B3A6B;padding:8px 16px;font-weight:600;" onclick="closeProctoringModal()">Tutup Laporan</button>
+       </div>
+    </div>
+  </div>
+
+  <!-- Foto Mahasiswa Modal -->
+  <div id="photoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:12px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2);animation: slideUp 0.3s ease-out;">
+       <div style="padding:16px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+         <h3 style="margin:0;font-size:1.1rem;color:#1B3A6B;" id="photoModalName">Foto Mahasiswa</h3>
+         <button onclick="closePhotoModal()" style="background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:#888;">✕</button>
+       </div>
+       <div style="padding:20px;text-align:center;background:#000;">
+         <img id="photoModalImg" src="" style="max-width:100%;max-height:60vh;border-radius:8px;object-fit:contain;" alt="Wajah Mahasiswa">
+       </div>
+    </div>
+  </div>
+
+  <!-- Foto Comparison Modal -->
+  <div id="compareModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);">
+    <div style="background:#1B3A6B;border-radius:12px;width:100%;max-width:900px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);animation: slideUp 0.3s ease-out;">
+       <div style="padding:24px;text-align:center;">
+         <h2 style="margin:0;font-size:1.4rem;color:#fff;font-weight:700;" id="compareModalName">Verifikasi Wajah - Nama Mahasiswa</h2>
+       </div>
+       
+       <div style="display:flex;height:400px;background:#112544;">
+          <div style="flex:1;padding:24px;display:flex;flex-direction:column;align-items:center;">
+             <h4 style="margin:0 0 16px 0;color:#3B82F6;font-size:1.1rem;">Foto Registrasi</h4>
+             <img id="compareImgReg" style="width:100%;height:100%;object-fit:cover;border-radius:8px;border:3px solid #3B82F6;" alt="Registrasi">
+          </div>
+          <div style="width:2px;background:rgba(255,255,255,0.1);"></div>
+          <div style="flex:1;padding:24px;display:flex;flex-direction:column;align-items:center;">
+             <h4 style="margin:0 0 16px 0;color:#10B981;font-size:1.1rem;">Foto Presensi</h4>
+             <img id="compareImgPres" style="width:100%;height:100%;object-fit:cover;border-radius:8px;border:3px solid #10B981;" alt="Presensi">
+          </div>
+       </div>
+
+       <div style="padding:24px;background:#1B3A6B;text-align:center;border-top:1px solid rgba(255,255,255,0.1);">
+         <p style="color:#aaa;margin-top:0;margin-bottom:16px;font-size:0.95rem;">Bandingkan kedua foto untuk memverifikasi identitas mahasiswa</p>
+         <input type="hidden" id="compareResultId">
+         <div style="display:flex;justify-content:center;gap:12px;">
+           <button class="btn" style="background:#EF4444;color:#fff;padding:12px 24px;font-weight:600;min-width:140px;border:none;" onclick="setVerification('rejected')">✕ Tidak Cocok</button>
+           <button class="btn" style="background:#10B981;color:#fff;padding:12px 24px;font-weight:600;min-width:140px;border:none;" onclick="setVerification('approved')">✓ Cocok</button>
+           <button class="btn btn-outline" style="border-color:#fff;color:#fff;padding:12px 24px;font-weight:600;" onclick="closeCompareModal()">Tutup</button>
+         </div>
+       </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</body>
+</html>

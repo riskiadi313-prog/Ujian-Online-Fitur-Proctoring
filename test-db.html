@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><body>
+<h2>Test Local Database</h2>
+<div id="out"></div>
+<script src="js/app.js"></script>
+<script>
+  (async () => {
+    if (App.initPromise) await App.initPromise;
+    const users = await App.getUsers();
+    document.getElementById('out').innerHTML = "Users count: " + users.length + "<br>" + 
+      users.map(u => u.name + " (" + u.role + ")").join("<br>");
+  })();
+</script>
+</body></html>

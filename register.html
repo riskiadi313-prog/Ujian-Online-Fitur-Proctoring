@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Daftar akun UNNES LMS — Platform Ujian Online">
+  <title>Daftar — UNNES LMS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card animate-in" style="max-width:560px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <img src="assets/logo.png" alt="Logo UNNES" style="width:80px;height:80px;object-fit:contain;margin:0 auto 16px;">
+      </div>
+      <h1>Daftar Akun Baru</h1>
+      <p class="auth-subtitle">Buat akun UNNES LMS Anda</p>
+
+      <!-- Removed Role Tabs for Lecturer (Lecturer accounts are pre-seeded) -->
+
+      <form id="registerForm" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" class="form-input" id="nameInput" placeholder="Masukkan nama lengkap" required>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label class="form-label" id="nimLabel">NIM</label>
+            <input type="text" class="form-input" id="nimInput" placeholder="Masukkan NIM" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Program Studi</label>
+            <select class="form-select" id="prodiInput" required>
+              <option value="">Pilih Prodi</option>
+              <option value="Teknologi Pendidikan">Teknologi Pendidikan</option>
+              <option value="Bimbingan Konseling">Bimbingan Konseling</option>
+              <option value="Psikologi">Psikologi</option>
+              <option value="Pendidikan Guru Sekolah Dasar">Pend. Guru Sekolah Dasar</option>
+              <option value="Pendidikan Non Formal">Pendidikan Non Formal</option>
+              <option value="Pendidikan Guru PAUD">Pend. Guru PAUD</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="emailInput" placeholder="nama@students.unnes.ac.id" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">No. WhatsApp</label>
+          <input type="tel" class="form-input" id="phoneInput" placeholder="08xxxxxxxxxx">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="passwordInput" placeholder="Min. 6 karakter" required minlength="6">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Konfirmasi Password</label>
+          <input type="password" class="form-input" id="confirmInput" placeholder="Ulangi password" required>
+        </div>
+
+        <!-- Face Verification -->
+        <div style="margin:24px 0;padding:20px;background:var(--surface-2);border-radius:var(--radius-md);border:1px solid rgba(0,0,0,0.06);">
+          <h3 style="font-size:1rem;margin-bottom:4px;">📸 Verifikasi Wajah</h3>
+          <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:16px;">Kamera akan mendeteksi wajah Anda secara otomatis menggunakan AI</p>
+
+          <div class="camera-box" id="cameraBox">
+            <video id="regVideo" autoplay playsinline muted style="display:none;"></video>
+            <canvas id="regCanvas" style="display:none;"></canvas>
+            <div class="camera-placeholder" id="cameraPlaceholder">
+              <span class="icon">📷</span>
+              <span style="font-size:0.9rem;">Klik tombol di bawah untuk memulai verifikasi</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-primary btn-sm" style="flex:1;" onclick="startVerification()" id="startBtn">📷 Mulai Verifikasi Wajah</button>
+            <button type="button" class="btn btn-outline btn-sm hidden" style="flex:1;" onclick="retryVerification()" id="retryBtn">🔄 Ulangi Verifikasi</button>
+          </div>
+
+          <!-- AI Verification Result -->
+          <div id="verifyResult" style="display:none;margin-top:16px;padding:16px;border-radius:var(--radius-sm);border:1px solid rgba(0,0,0,0.06);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <span id="resultIcon" style="font-size:2rem;"></span>
+              <div>
+                <div id="resultTitle" style="font-weight:700;font-size:0.95rem;"></div>
+                <div id="resultDesc" style="font-size:0.8rem;color:var(--text-secondary);"></div>
+              </div>
+            </div>
+            <div id="resultDetails" style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;">
+              <!-- AI detection details -->
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-accent btn-lg" style="width:100%;">
+          🚀 Daftar Sekarang
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Sudah punya akun? <a href="login.html">Masuk di sini</a>
+      </p>
+      <p style="text-align:center;margin-top:12px;">
+        <a href="login.html" style="font-size:0.85rem;color:var(--text-muted);">← Kembali ke Login</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    let currentRole = 'student';
+    let cameraStream = null;
+    let faceVerified = false;
+    let modelsLoaded = false;
+    let detectLoop = null;
+
+    async function startVerification() {
+      const video = document.getElementById('regVideo');
+      const startBtn = document.getElementById('startBtn');
+
+      // Reset state
+      faceVerified = false;
+      document.getElementById('verifyResult').style.display = 'none';
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+        video.srcObject = cameraStream;
+        video.style.display = 'block';
+        document.getElementById('cameraPlaceholder').style.display = 'none';
+        startBtn.textContent = '⏳ Memuat AI...';
+        startBtn.disabled = true;
+
+        // Load face-api models
+        if (!modelsLoaded) {
+          try {
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+            await Promise.all([
+              faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+              faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+              faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+            ]);
+            modelsLoaded = true;
+          } catch(e) {
+            showResult('error', '❌', 'Model AI Gagal Dimuat', 'Tidak dapat memuat model pengenalan wajah. Silakan coba lagi.', []);
+            stopCamera();
+            startBtn.textContent = '📷 Mulai Verifikasi Wajah';
+            startBtn.disabled = false;
+            return;
+          }
+        }
+
+        startBtn.textContent = '🔍 Mendeteksi wajah...';
+
+        // Start auto-detection loop
+        let attempts = 0;
+        const maxAttempts = 15; // ~9 seconds
+
+        detectLoop = setInterval(async () => {
+          attempts++;
+          if (attempts > maxAttempts) {
+            clearInterval(detectLoop);
+            showResult('error', '😶', 'Wajah Tidak Terdeteksi', 'AI tidak dapat mendeteksi wajah Anda. Pastikan wajah terlihat jelas dan pencahayaan cukup.', [
+              { label: 'Status Deteksi', value: 'Gagal', color: 'var(--danger)' },
+              { label: 'Percobaan', value: `${maxAttempts}x`, color: 'var(--text-muted)' },
+            ]);
+            stopCamera();
+            startBtn.classList.add('hidden');
+            document.getElementById('retryBtn').classList.remove('hidden');
+            return;
+          }
+
+          if (video.readyState < 2) return;
+
+          try {
+            const detections = await faceapi
+              .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+              .withFaceLandmarks(true)
+              .withFaceExpressions();
+
+            if (detections.length === 1) {
+              clearInterval(detectLoop);
+
+              const det = detections[0];
+              const score = det.detection.score;
+              const expressions = det.expressions;
+
+              // Get dominant expression
+              let maxExpr = 'neutral';
+              let maxVal = 0;
+              for (const [expr, val] of Object.entries(expressions)) {
+                if (val > maxVal) { maxExpr = expr; maxVal = val; }
+              }
+
+              const exprLabels = { neutral: 'Netral', happy: 'Senang', sad: 'Sedih', angry: 'Marah', fearful: 'Takut', disgusted: 'Jijik', surprised: 'Terkejut' };
+              const exprEmojis = { neutral: '😐', happy: '😊', sad: '😢', angry: '😠', fearful: '😨', disgusted: '🤢', surprised: '😮' };
+
+              // Capture the photo
+              const canvas = document.getElementById('regCanvas');
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(video, 0, 0);
+
+              // Draw face box on canvas
+              const box = det.detection.box;
+              ctx.strokeStyle = '#10B981';
+              ctx.lineWidth = 3;
+              ctx.strokeRect(box.x, box.y, box.width, box.height);
+              ctx.fillStyle = '#10B981';
+              ctx.font = 'bold 14px Inter, sans-serif';
+              ctx.fillText('✓ Terverifikasi', box.x, box.y - 8);
+
+              // Draw landmarks
+              if (det.landmarks) {
+                const pts = det.landmarks.positions;
+                ctx.fillStyle = 'rgba(27, 58, 107, 0.6)';
+                for (const pt of pts) {
+                  ctx.beginPath();
+                  ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+              }
+
+              canvas.style.display = 'block';
+              canvas.style.transform = 'scaleX(-1)';
+              video.style.display = 'none';
+              stopCamera();
+
+              faceVerified = true;
+
+              showResult('success', '✅', 'Verifikasi Wajah Berhasil', 'AI berhasil mendeteksi dan memverifikasi wajah Anda.', [
+                { label: 'Confidence', value: `${Math.round(score * 100)}%`, color: 'var(--success)' },
+                { label: 'Jumlah Wajah', value: '1 wajah terdeteksi', color: 'var(--success)' },
+                { label: 'Ekspresi', value: `${exprEmojis[maxExpr]} ${exprLabels[maxExpr]} (${Math.round(maxVal * 100)}%)`, color: 'var(--primary)' },
+                { label: 'Landmark Wajah', value: `${det.landmarks ? det.landmarks.positions.length : 0} titik terdeteksi`, color: 'var(--primary)' },
+              ]);
+
+              startBtn.classList.add('hidden');
+              document.getElementById('retryBtn').classList.remove('hidden');
+
+            } else if (detections.length > 1) {
+              clearInterval(detectLoop);
+              showResult('error', '👥', 'Terdeteksi Lebih dari 1 Wajah', 'Pastikan hanya wajah Anda yang terlihat di kamera.', [
+                { label: 'Jumlah Wajah', value: `${detections.length} wajah`, color: 'var(--danger)' },
+              ]);
+              stopCamera();
+              startBtn.classList.add('hidden');
+              document.getElementById('retryBtn').classList.remove('hidden');
+            }
+            // If 0 faces, continue trying...
+
+          } catch(e) {
+            console.error('Detection error:', e);
+          }
+        }, 600);
+
+      } catch(err) {
+        App.toast('Gagal mengakses kamera. Pastikan izin kamera diberikan.', 'danger');
+        startBtn.textContent = '📷 Mulai Verifikasi Wajah';
+        startBtn.disabled = false;
+      }
+    }
+
+    function showResult(type, icon, title, desc, details) {
+      const resultEl = document.getElementById('verifyResult');
+      resultEl.style.display = 'block';
+      resultEl.style.background = type === 'success' ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)';
+      resultEl.style.borderColor = type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
+
+      document.getElementById('resultIcon').textContent = icon;
+      document.getElementById('resultTitle').textContent = title;
+      document.getElementById('resultTitle').style.color = type === 'success' ? 'var(--success)' : 'var(--danger)';
+      document.getElementById('resultDesc').textContent = desc;
+
+      const detailsEl = document.getElementById('resultDetails');
+      detailsEl.innerHTML = details.map(d => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(0,0,0,0.02);border-radius:6px;">
+          <span style="color:var(--text-secondary);">${d.label}</span>
+          <span style="font-weight:600;color:${d.color};">${d.value}</span>
+        </div>
+      `).join('');
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+    }
+
+    function retryVerification() {
+      if (detectLoop) clearInterval(detectLoop);
+      faceVerified = false;
+
+      const video = document.getElementById('regVideo');
+      const canvas = document.getElementById('regCanvas');
+      video.style.display = 'none';
+      canvas.style.display = 'none';
+      video.srcObject = null;
+
+      document.getElementById('verifyResult').style.display = 'none';
+      document.getElementById('retryBtn').classList.add('hidden');
+
+      const startBtn = document.getElementById('startBtn');
+      startBtn.classList.remove('hidden');
+      startBtn.textContent = '📷 Mulai Verifikasi Wajah';
+      startBtn.disabled = false;
+
+      document.getElementById('cameraPlaceholder').style.display = 'flex';
+
+      startVerification();
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('nameInput').value.trim();
+      const nim = document.getElementById('nimInput').value.trim();
+      const email = document.getElementById('emailInput').value.trim();
+      const phone = document.getElementById('phoneInput').value.trim();
+      const prodi = document.getElementById('prodiInput').value;
+      const password = document.getElementById('passwordInput').value;
+      const confirm = document.getElementById('confirmInput').value;
+
+      if (password !== confirm) {
+        App.toast('Password tidak cocok!', 'danger');
+        return;
+      }
+
+      if (!faceVerified) {
+        App.toast('Silakan lakukan verifikasi wajah terlebih dahulu!', 'warning');
+        return;
+      }
+
+      // Extract base64 image from the verified canvas
+      const canvas = document.getElementById('regCanvas');
+      const photoReg = canvas ? canvas.toDataURL('image/jpeg', 0.8) : null;
+
+      const userData = { nim, name, email, phone, prodi, password, role: currentRole, registeredAt: new Date().toISOString(), photoReg };
+      const result = await App.registerUser(userData);
+
+      if (result.error) {
+        App.toast(result.error, 'danger');
+        return;
+      }
+
+      App.toast('Registrasi berhasil! Data tersimpan di database.', 'success');
+      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+    }
+  </script>
+</body>
+</html>

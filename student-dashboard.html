@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dashboard Mahasiswa — UNNES LMS">
+  <title>Dashboard Mahasiswa — UNNES LMS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Dashboard-specific styles matching reference design */
+    .dash-navbar {
+      background: linear-gradient(135deg, #1B3A6B 0%, #2a5298 100%);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .dash-navbar .brand {
+      display: flex; align-items: center; gap: 12px; text-decoration: none;
+    }
+    .dash-navbar .brand img { width: 40px; height: 40px; object-fit: contain; }
+    .dash-navbar .brand-text { color: #fff; }
+    .dash-navbar .brand-text h1 { font-size: 1.15rem; font-weight: 800; margin: 0; line-height: 1.2; }
+    .dash-navbar .brand-text p { font-size: 0.72rem; opacity: 0.75; margin: 0; }
+    .dash-navbar .nav-right { display: flex; align-items: center; gap: 16px; }
+    .dash-navbar .nav-right .user-info { text-align: right; color: #fff; }
+    .dash-navbar .nav-right .user-info .uname { font-weight: 700; font-size: 0.9rem; }
+    .dash-navbar .nav-right .user-info .uprodi { font-size: 0.75rem; opacity: 0.75; }
+    .dash-navbar .btn-logout {
+      background: #D4A843; color: #1B3A6B; border: none; padding: 8px 18px;
+      border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+    }
+    .dash-navbar .btn-logout:hover { background: #e6bc5a; transform: translateY(-1px); }
+
+    .dash-body { background: #f5f6fa; min-height: calc(100vh - 64px); padding: 28px 32px 40px; }
+    .dash-container { max-width: 1100px; margin: 0 auto; }
+
+    /* Greeting Card */
+    .greeting-card {
+      background: linear-gradient(135deg, #FFF8E7 0%, #FFF3D0 100%);
+      border-radius: 16px; padding: 28px 32px;
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 28px; border: 1px solid rgba(212,168,67,0.15);
+    }
+    .greeting-card .wave { font-size: 3rem; }
+    .greeting-card h2 { font-size: 1.35rem; font-weight: 800; color: #D4A843; margin: 0 0 4px; }
+    .greeting-card p { font-size: 0.88rem; color: #8B7355; margin: 0; }
+
+    /* Stat Cards Row */
+    .stat-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 14px; padding: 20px 18px;
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; border: 2px solid transparent;
+      transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .stat-card.active { border-color: #D4A843; box-shadow: 0 4px 16px rgba(212,168,67,0.2); }
+    .stat-circle {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .stat-circle.green { background: radial-gradient(circle, #6BCB77 40%, #3DA349); }
+    .stat-circle.yellow { background: radial-gradient(circle, #FFD93D 40%, #D4A843); }
+    .stat-circle.blue { background: radial-gradient(circle, #6C9BCF 40%, #3A6EA5); }
+    .stat-circle.red { background: radial-gradient(circle, #FF6B6B 40%, #D44A4A); }
+    .stat-num { font-size: 1.8rem; font-weight: 900; color: #222; }
+    .stat-info { line-height: 1.3; }
+    .stat-info .slabel { font-size: 0.82rem; font-weight: 600; color: #444; }
+    .stat-info .sclick { font-size: 0.7rem; color: #aaa; font-style: italic; }
+
+    /* Two Column Layout */
+    .dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+    @media (max-width: 768px) {
+      .stat-row { grid-template-columns: repeat(2, 1fr); }
+      .dash-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Panel Card */
+    .panel-card {
+      background: #fff; border-radius: 16px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .panel-header h3 { font-size: 1.05rem; font-weight: 700; color: #1B3A6B; margin: 0; }
+    .panel-tabs { display: flex; gap: 8px; }
+    .panel-tab {
+      padding: 6px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; border: 1px solid #e0e0e0; background: #fff; color: #666; transition: all 0.2s;
+    }
+    .panel-tab.active { background: #1B3A6B; color: #fff; border-color: #1B3A6B; }
+    .btn-refresh {
+      display: flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 8px;
+      font-size: 0.78rem; font-weight: 600; background: #10B981; color: #fff; border: none; cursor: pointer;
+    }
+
+    /* Exam Item Card */
+    .exam-item {
+      border-left: 4px solid #D4A843; border-radius: 12px; padding: 20px;
+      background: #fafafa; margin-bottom: 14px; transition: all 0.2s;
+    }
+    .exam-item:hover { background: #f0f0f0; }
+    .exam-item-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+    .exam-item h4 { font-size: 0.95rem; font-weight: 700; color: #222; margin: 0 0 4px; }
+    .exam-item .ecourse { font-size: 0.82rem; color: #888; }
+    .exam-item .badge-status {
+      padding: 4px 12px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+    }
+    .badge-tersedia { background: #E8F5E9; color: #2E7D32; }
+    .badge-upcoming { background: #FFF3E0; color: #E65100; }
+    .badge-selesai { background: #E3F2FD; color: #1565C0; }
+    .badge-terlewat { background: #FFEBEE; color: #C62828; }
+    .exam-meta-row { display: flex; gap: 20px; margin-bottom: 14px; font-size: 0.8rem; color: #777; }
+    .exam-meta-row span { display: flex; align-items: center; gap: 4px; }
+    .btn-mulai {
+      background: #10B981; color: #fff; border: none; padding: 8px 20px;
+      border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
+    }
+    .btn-mulai:hover { background: #0d9668; transform: translateY(-1px); }
+
+    /* Attendance / History Card */
+    .attend-item {
+      padding: 14px; border-radius: 10px; background: #fafafa; margin-bottom: 12px;
+    }
+    .attend-item h4 { font-size: 0.9rem; font-weight: 700; margin: 0 0 4px; }
+    .attend-item .adate { font-size: 0.75rem; color: #999; }
+    .attend-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .attend-stat {
+      text-align: center; padding: 14px 8px; border-radius: 10px;
+    }
+    .attend-stat.tepat { background: #E8F5E9; }
+    .attend-stat.terlambat { background: #FFF8E1; }
+    .attend-stat .anum { font-size: 1.8rem; font-weight: 900; }
+    .attend-stat.tepat .anum { color: #2E7D32; }
+    .attend-stat.terlambat .anum { color: #E65100; }
+    .attend-stat .alabel { font-size: 0.75rem; color: #888; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="dash-navbar">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.png" alt="UNNES">
+      <div class="brand-text">
+        <h1>LMS UNNES</h1>
+        <p>Sistem Ujian Online dengan Proctoring AI</p>
+      </div>
+    </a>
+    <div class="nav-right">
+      <div class="user-info">
+        <div class="uname" id="navName"></div>
+        <div class="uprodi" id="navProdi"></div>
+      </div>
+      <button class="btn-logout" onclick="App.logout()">🚪 Keluar</button>
+    </div>
+  </nav>
+
+  <!-- Body -->
+  <div class="dash-body">
+    <div class="dash-container">
+
+      <!-- Greeting -->
+      <div class="greeting-card animate-in">
+        <div class="wave">👋</div>
+        <div>
+          <h2 id="greeting">Selamat Datang!</h2>
+          <p id="subInfo"></p>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stat-row">
+        <div class="stat-card animate-in" id="cardAvailable" onclick="showSection('available')">
+          <div style="font-size:2rem;">📝</div>
+          <div class="stat-num" id="statAvailable">0</div>
+          <div class="stat-info">
+            <div class="slabel">Ujian Tersedia</div>
+            <div class="sclick">Klik untuk melihat</div>
+          </div>
+        </div>
+        <div class="stat-card animate-in" id="cardUpcoming" onclick="showSection('upcoming')">
+          <div style="font-size:2rem;">📅</div>
+          <div class="stat-num" id="statUpcoming">0</div>
+          <div class="stat-info">
+            <div class="slabel">Ujian Akan Datang</div>
+            <div class="sclick">Klik untuk melihat</div>
+          </div>
+        </div>
+        <div class="stat-card animate-in" id="cardCompleted" onclick="showSection('completed')">
+          <div style="font-size:2rem;">✅</div>
+          <div class="stat-num" id="statCompleted">0</div>
+          <div class="stat-info">
+            <div class="slabel">Ujian Selesai</div>
+            <div class="sclick">Klik untuk melihat</div>
+          </div>
+        </div>
+        <div class="stat-card animate-in" id="cardMissed" onclick="showSection('missed')">
+          <div style="font-size:2rem;">⏰</div>
+          <div class="stat-num" id="statMissed">0</div>
+          <div class="stat-info">
+            <div class="slabel">Ujian Terlewat</div>
+            <div class="sclick">Klik untuk melihat</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two Column Layout -->
+      <div class="dash-grid">
+        <!-- Left: Daftar Ujian -->
+        <div class="panel-card animate-in" id="examPanel">
+          <div class="panel-header">
+            <h3>📋 Daftar Ujian</h3>
+          </div>
+          <div id="examListContent">
+            <!-- Dynamic -->
+          </div>
+        </div>
+
+        <!-- Right: Riwayat Presensi -->
+        <div class="panel-card animate-in">
+          <div class="panel-header">
+            <h3>📋 Riwayat Presensi</h3>
+          </div>
+          <div id="attendanceContent">
+            <!-- Dynamic -->
+          </div>
+          <div class="attend-stats" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+            <div class="attend-stat tepat">
+              <div class="anum" id="statTepat">0</div>
+              <div class="alabel">Tepat Waktu</div>
+            </div>
+            <div class="attend-stat terlambat">
+              <div class="anum" id="statTerlambat">0</div>
+              <div class="alabel">Terlambat</div>
+            </div>
+            <div class="attend-stat" style="background:#E8F5E9;">
+              <div class="anum" style="color:#2E7D32;" id="statDiterima">0</div>
+              <div class="alabel">Diterima</div>
+            </div>
+            <div class="attend-stat" style="background:#FFEBEE;">
+              <div class="anum" style="color:#C62828;" id="statDitolak">0</div>
+              <div class="alabel">Ditolak</div>
+            </div>
+          </div>
+          <p style="text-align:center;font-size:0.78rem;color:#aaa;margin-top:12px;" id="totalPresensi">Total Presensi: 0 ujian</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Pre-Exam Confirmation Modal -->
+  <div id="examConfirmModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.3s ease-out;">
+      
+      <!-- Warning Box -->
+      <div style="margin:24px 24px 0;padding:20px;background:#FFF8E1;border:2px solid #FFD54F;border-radius:12px;">
+        <h3 style="margin:0 0 12px;font-size:1.05rem;color:#E65100;display:flex;align-items:center;gap:6px;">⚠ Perhatian!</h3>
+        <ul style="margin:0;padding-left:20px;font-size:0.88rem;color:#5D4037;line-height:1.8;">
+          <li>Pastikan kamera dan mikrofon berfungsi dengan baik</li>
+          <li>Jangan meninggalkan halaman ujian selama pengerjaan</li>
+          <li>Jangan membuka tab atau aplikasi lain</li>
+          <li>Sistem akan mendeteksi kecurangan otomatis</li>
+        </ul>
+      </div>
+
+      <!-- Feature Icons Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:20px 24px;">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:2rem;margin-bottom:6px;">👁️</div>
+          <div style="font-size:0.85rem;font-weight:700;color:#333;">Deteksi Wajah</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:2rem;margin-bottom:6px;">🛡️</div>
+          <div style="font-size:0.85rem;font-weight:700;color:#333;">Anti Kecurangan</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:2rem;margin-bottom:6px;">⏱️</div>
+          <div style="font-size:0.85rem;font-weight:700;color:#333;">Timer Otomatis</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:2rem;margin-bottom:6px;">🤖</div>
+          <div style="font-size:0.85rem;font-weight:700;color:#333;">AI Proctoring</div>
+        </div>
+      </div>
+
+      <!-- Agreement Checkbox -->
+      <div style="padding:0 24px 20px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;">
+          <input type="checkbox" id="agreeCheckbox" onchange="toggleAgree()" style="margin-top:3px;width:18px;height:18px;accent-color:#10B981;cursor:pointer;flex-shrink:0;">
+          <span style="font-size:0.82rem;color:#333;line-height:1.5;">Saya siap mengikuti ujian dan mematuhi semua aturan yang berlaku. Saya mengerti bahwa sistem proctoring akan memantau aktivitas saya selama ujian.</span>
+        </label>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:12px;padding:0 24px 24px;">
+        <button onclick="closeExamConfirm()" style="flex:1;padding:14px;border-radius:10px;border:1px solid #e0e0e0;background:#fff;color:#666;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.2s;">Batal</button>
+        <button id="confirmStartBtn" onclick="confirmStartExam()" disabled style="flex:1.3;padding:14px;border-radius:10px;border:none;background:#ccc;color:#fff;font-weight:700;font-size:0.95rem;cursor:not-allowed;transition:all 0.2s;">Ya, Mulai Ujian</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© 2026 UNNES LMS — Universitas Negeri Semarang</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    let allData = { available: [], upcoming: [], completed: [], missed: [], myResults: [] };
+    let pendingExamId = null;
+
+    function showExamConfirm(examId) {
+      pendingExamId = examId;
+      document.getElementById('agreeCheckbox').checked = false;
+      const btn = document.getElementById('confirmStartBtn');
+      btn.disabled = true;
+      btn.style.background = '#ccc';
+      btn.style.cursor = 'not-allowed';
+      document.getElementById('examConfirmModal').style.display = 'flex';
+    }
+
+    function closeExamConfirm() {
+      document.getElementById('examConfirmModal').style.display = 'none';
+      pendingExamId = null;
+    }
+
+    function toggleAgree() {
+      const checked = document.getElementById('agreeCheckbox').checked;
+      const btn = document.getElementById('confirmStartBtn');
+      btn.disabled = !checked;
+      btn.style.background = checked ? '#10B981' : '#ccc';
+      btn.style.cursor = checked ? 'pointer' : 'not-allowed';
+    }
+
+    function confirmStartExam() {
+      if (!pendingExamId) return;
+      window.location.href = 'take-exam.html?id=' + pendingExamId;
+    }
+    let activeTab = 'available';
+
+    function showSection(name) {
+      switchTab(name);
+      document.getElementById('examPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function switchTab(name) {
+      activeTab = name;
+
+      // Update tab buttons
+      document.querySelectorAll('.panel-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === name);
+      });
+
+      // Update stat card highlights
+      ['available', 'upcoming', 'completed', 'missed'].forEach(k => {
+        document.getElementById('card' + k.charAt(0).toUpperCase() + k.slice(1)).classList.toggle('active', k === name);
+      });
+
+      renderExamList(name);
+    }
+
+    function renderExamList(type) {
+      const el = document.getElementById('examListContent');
+      const exams = allData[type];
+
+      if (exams.length === 0) {
+        const labels = { available: 'Tidak ada ujian tersedia.', upcoming: 'Belum ada ujian dijadwalkan.', completed: 'Belum ada ujian diselesaikan.', missed: 'Tidak ada ujian terlewat. 🎉' };
+        el.innerHTML = `<div style="text-align:center;padding:40px;color:#aaa;">${labels[type]}</div>`;
+        return;
+      }
+
+      const badgeMap = { available: ['TERSEDIA', 'badge-tersedia'], upcoming: ['AKAN DATANG', 'badge-upcoming'], completed: ['SELESAI', 'badge-selesai'], missed: ['TERLEWAT', 'badge-terlewat'] };
+
+      el.innerHTML = exams.map(e => {
+        const [badgeText, badgeClass] = badgeMap[type];
+        let actionBtn = '';
+        let detailPanel = '';
+
+        if (type === 'available') {
+          actionBtn = `<button class="btn-mulai" style="border:none;cursor:pointer;" onclick="showExamConfirm('${e.id}')">▶ Mulai Ujian</button>`;
+        } else if (type === 'completed') {
+          const res = allData.myResults.find(r => r.examId === e.id);
+          const score = res ? res.score : '-';
+          actionBtn = `<button class="btn-mulai" style="background:#1B3A6B;border:none;cursor:pointer;" onclick="toggleStudentResult('${e.id}')">📊 Lihat Hasil (${score})</button>`;
+
+          if (res) {
+            const scoreColor = res.score >= 70 ? '#10B981' : res.score >= 50 ? '#F59E0B' : '#EF4444';
+            const grade = getGrade(res.score);
+            const vCount = res.violations ? res.violations.length : 0;
+            const timeMin = res.timeUsed ? Math.floor(res.timeUsed / 60) : 0;
+            const timeSec = res.timeUsed ? res.timeUsed % 60 : 0;
+
+            // Build answer breakdown
+            let answersHtml = '';
+            if (e.questions && res.answers) {
+              answersHtml = e.questions.map((q, qi) => {
+                const studentAns = res.answers[q.id];
+                let isCorrect = false;
+                let answerDisplay = '';
+
+                if (q.type === 'multiple') {
+                  isCorrect = studentAns === q.answer;
+                  answerDisplay = studentAns !== undefined ? `${String.fromCharCode(65 + studentAns)}. ${q.options[studentAns] || ''}` : '<em style="color:#aaa;">Tidak dijawab</em>';
+                } else {
+                  isCorrect = studentAns && studentAns.trim().length > 10;
+                  answerDisplay = studentAns ? studentAns.substring(0, 80) + (studentAns.length > 80 ? '...' : '') : '<em style="color:#aaa;">Tidak dijawab</em>';
+                }
+
+                return `<div style="padding:10px 12px;background:${isCorrect ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)'};border-left:3px solid ${isCorrect ? '#10B981' : '#EF4444'};border-radius:6px;margin-bottom:6px;">
+                  <div style="font-size:0.78rem;font-weight:600;color:#444;margin-bottom:4px;">Soal ${qi+1}: ${q.text.substring(0,60)}${q.text.length > 60 ? '...' : ''}</div>
+                  <div style="font-size:0.75rem;color:#666;">Jawaban: ${answerDisplay}</div>
+                  <div style="font-size:0.72rem;margin-top:2px;">${isCorrect ? '<span style="color:#10B981;font-weight:600;">✅ Benar</span>' : '<span style="color:#EF4444;font-weight:600;">❌ Salah</span>'} · ${q.points} poin</div>
+                </div>`;
+              }).join('');
+            }
+
+            detailPanel = `
+            <div id="detail_${e.id}" style="display:none;margin-top:14px;padding:16px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;animation:slideDown 0.3s ease-out;">
+              <!-- Score Summary -->
+              <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #eee;">
+                <div style="width:80px;height:80px;border-radius:50%;border:4px solid ${scoreColor};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="font-size:1.8rem;font-weight:900;color:${scoreColor};">${res.score}</span>
+                  <span style="font-size:0.6rem;color:#aaa;">/100</span>
+                </div>
+                <div>
+                  <div style="font-size:1.6rem;font-weight:900;color:${scoreColor};margin-bottom:2px;">${grade}</div>
+                  <div style="font-size:0.8rem;color:#666;">⏱ Waktu: ${timeMin} mnt ${timeSec} dtk</div>
+                  <div style="font-size:0.8rem;color:${vCount > 0 ? '#EF4444' : '#10B981'};">🛡 Pelanggaran: ${vCount}</div>
+                  <div style="font-size:0.8rem;color:#666;">📅 Submit: ${App.formatDate(res.submittedAt)} ${App.formatTime(res.submittedAt)}</div>
+                </div>
+              </div>
+              <!-- Answer Breakdown -->
+              <h4 style="font-size:0.9rem;font-weight:700;color:#1B3A6B;margin:0 0 10px;">📝 Rincian Jawaban</h4>
+              <div style="max-height:300px;overflow-y:auto;">
+                ${answersHtml || '<div style="color:#aaa;text-align:center;padding:12px;">Data jawaban tidak tersedia.</div>'}
+              </div>
+            </div>`;
+          }
+        }
+
+        return `
+          <div class="exam-item">
+            <div class="exam-item-top">
+              <div>
+                <h4>${e.title}</h4>
+                <span class="ecourse">${e.course}</span>
+              </div>
+              <span class="badge-status ${badgeClass}">${badgeText}</span>
+            </div>
+            <div class="exam-meta-row">
+              <span>⏱ ${App.formatDuration(e.duration)}</span>
+              <span>📝 ${e.questions ? e.questions.length : 0} Soal</span>
+              <span>📅 ${App.formatDate(e.date)}</span>
+            </div>
+            ${actionBtn}
+            ${detailPanel}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleStudentResult(examId) {
+      const panel = document.getElementById('detail_' + examId);
+      if (!panel) return;
+      if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+
+    function getGrade(score) {
+      if (score >= 85) return 'A';
+      if (score >= 80) return 'A-';
+      if (score >= 75) return 'B+';
+      if (score >= 70) return 'B';
+      if (score >= 65) return 'B-';
+      if (score >= 60) return 'C+';
+      if (score >= 55) return 'C';
+      if (score >= 50) return 'D';
+      return 'E';
+    }
+
+    (async () => {
+      const user = App.requireAuth('student');
+      if (!user) return;
+
+      if (App.initPromise) await App.initPromise;
+
+      // Greeting
+      const hour = new Date().getHours();
+      let greet = 'Selamat Pagi';
+      if (hour >= 12 && hour < 15) greet = 'Selamat Siang';
+      else if (hour >= 15 && hour < 18) greet = 'Selamat Sore';
+      else if (hour >= 18) greet = 'Selamat Malam';
+
+      document.getElementById('greeting').textContent = `${greet}, ${user.name}!`;
+      document.getElementById('subInfo').textContent = `${user.prodi} — ${user.nim}`;
+      document.getElementById('navName').textContent = user.name;
+      document.getElementById('navProdi').textContent = user.prodi;
+
+      const exams = await App.getExams();
+      const results = await App.getResults();
+      const now = new Date();
+
+      const myResults = results.filter(r => r.studentId === user.nim);
+      const completedExamIds = myResults.map(r => r.examId);
+
+      exams.forEach(exam => {
+        if (completedExamIds.includes(exam.id)) {
+          allData.completed.push(exam);
+        } else {
+          const examDate = new Date(exam.date);
+          const endDate = new Date(exam.endDate);
+          if (now >= examDate && now <= endDate) {
+            allData.available.push(exam);
+          } else if (now < examDate) {
+            allData.upcoming.push(exam);
+          } else {
+            allData.missed.push(exam);
+          }
+        }
+      });
+      allData.myResults = myResults;
+
+      // Stats
+      document.getElementById('statAvailable').textContent = allData.available.length;
+      document.getElementById('statUpcoming').textContent = allData.upcoming.length;
+      document.getElementById('statCompleted').textContent = allData.completed.length;
+      document.getElementById('statMissed').textContent = allData.missed.length;
+
+      // Render initial tab
+      renderExamList('available');
+
+      // Attendance / Presensi
+      const attendEl = document.getElementById('attendanceContent');
+      if (myResults.length === 0) {
+        attendEl.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;">Belum ada riwayat presensi.</div>';
+      } else {
+        let tepat = 0, terlambat = 0, diterima = 0, ditolak = 0;
+        attendEl.innerHTML = myResults.map(r => {
+          const exam = exams.find(e => e.id === r.examId);
+          const examTitle = exam ? `${exam.title}` : r.examId;
+          const submitTime = new Date(r.submittedAt);
+          const isLate = exam ? submitTime > new Date(exam.endDate) : false;
+          if (isLate) terlambat++; else tepat++;
+
+          // Verification status from lecturer
+          let vBadge = '';
+          if (r.verificationStatus === 'approved') {
+            diterima++;
+            vBadge = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#2E7D32;padding:4px 12px;border-radius:6px;font-size:0.75rem;font-weight:700;">✅ Presensi Diterima</div>`;
+          } else if (r.verificationStatus === 'rejected') {
+            ditolak++;
+            vBadge = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:#FFEBEE;color:#C62828;padding:4px 12px;border-radius:6px;font-size:0.75rem;font-weight:700;">❌ Presensi Ditolak</div>`;
+          } else {
+            vBadge = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:#FFF8E1;color:#E65100;padding:4px 12px;border-radius:6px;font-size:0.75rem;font-weight:700;">⏳ Menunggu Verifikasi Dosen</div>`;
+          }
+
+          return `<div class="attend-item" style="display:flex;align-items:flex-start;justify-content:space-between;">
+            <div>
+              <h4>${examTitle}</h4>
+              <div class="adate">${App.formatDate(r.submittedAt)} • ${App.formatTime(r.submittedAt)}</div>
+              ${vBadge}
+            </div>
+            <span style="font-size:1.2rem;">${isLate ? '❌' : '✅'}</span>
+          </div>`;
+        }).join('');
+
+        document.getElementById('statTepat').textContent = tepat;
+        document.getElementById('statTerlambat').textContent = terlambat;
+        document.getElementById('statDiterima').textContent = diterima;
+        document.getElementById('statDitolak').textContent = ditolak;
+        document.getElementById('totalPresensi').textContent = `Total Presensi: ${myResults.length} ujian`;
+      }
+    })();
+  </script>
+</body>
+</html>
